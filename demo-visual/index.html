@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GoDeporte | Consola de Exposición de Microservicios</title>
+    <title>GoDeporte - Panel de Control</title>
     <style>
         :root {
             --bg: #0b132b;
@@ -37,13 +37,13 @@
             border-bottom: 1px solid var(--border);
             margin-bottom: 24px;
         }
-        .header h1 { font-size: 26px; color: var(--primary); font-weight: 700; }
+        .header h1 { font-size: 24px; color: var(--primary); font-weight: 700; }
         .header p { color: var(--text-dim); font-size: 14px; }
         .badge {
             background: #1e3a8a;
             color: #93c5fd;
             padding: 4px 10px;
-            border-radius: 999px;
+            border-radius: 6px;
             font-size: 12px;
             font-weight: 600;
         }
@@ -93,9 +93,6 @@
             font-size: 18px;
             color: var(--primary);
             margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
         }
 
         .actions-list {
@@ -180,11 +177,11 @@
 
     <div class="header">
         <div>
-            <h1>GoDeporte · Consola de Demostración de Microservicios</h1>
-            <p>Taller de Desarrollo | UNU 2026-II | Docente: Dr. León Esteban Flores Saldaña</p>
+            <h1>GoDeporte - Panel de Control</h1>
+            <p>Taller de Desarrollo | UNU 2026-II</p>
         </div>
-        <div style="text-align: right;">
-            <span class="badge">Miembro a cargo: Jhean Carlos Tecse Lozano (ms-pagos)</span>
+        <div>
+            <span class="badge">ms-pagos | Jhean Tecse</span>
         </div>
     </div>
 
@@ -206,7 +203,7 @@
         </div>
         <div class="service-card">
             <div class="service-info">
-                <h3>ms-pagos (Mi Parte)</h3>
+                <h3>ms-pagos</h3>
                 <span>http://localhost:8003</span>
             </div>
             <div id="dot-pagos" class="status-dot"></div>
@@ -216,55 +213,55 @@
     <div class="main-grid">
         <!-- Columna Izquierda: Acciones de Demostración -->
         <div class="panel">
-            <h2>⚙️ Casos de Uso para la Exposición</h2>
+            <h2>Pruebas de Microservicios</h2>
             <div class="actions-list">
                 <button class="btn-action" onclick="ejecutarAccion('health')">
-                    <span>1. Verificar Red y Salud de Microservicios</span>
+                    <span>1. Verificar estado de los servicios</span>
                     <span class="tag">GET /health</span>
                 </button>
 
                 <button class="btn-action" onclick="ejecutarAccion('listar_reservas')">
-                    <span>2. Consultar Reservas Actuales</span>
+                    <span>2. Listar reservas registradas</span>
                     <span class="tag">GET /reservas/</span>
                 </button>
 
                 <button class="btn-action" onclick="ejecutarAccion('crear_reserva')">
-                    <span>3. Registrar Nueva Reserva (Estado PENDIENTE)</span>
+                    <span>3. Crear nueva reserva (Pendiente)</span>
                     <span class="tag">POST /reservas/</span>
                 </button>
 
                 <button class="btn-action success" onclick="ejecutarAccion('pagar_aprobado')">
-                    <span>4. Probar Flujo Completo: Pago Aprobado (Yape S/. 80.00)</span>
+                    <span>4. Pagar reserva (Yape - Aprobado)</span>
                     <span class="tag">POST /reservas/{id}/pagar</span>
                 </button>
 
                 <button class="btn-action danger" onclick="ejecutarAccion('pagar_rechazado')">
-                    <span>5. Probar Regla de Negocio: Pago Rechazado (Cancelación)</span>
+                    <span>5. Pagar reserva (Tarjeta - Rechazado)</span>
                     <span class="tag">POST /reservas/{id}/pagar</span>
                 </button>
 
                 <button class="btn-action" onclick="ejecutarAccion('ver_bd_pagos')">
-                    <span>6. Auditoría BD Propia de ms-pagos (Database-per-Service)</span>
+                    <span>6. Consultar base de datos de pagos (SQLite)</span>
                     <span class="tag">GET /pagos/</span>
                 </button>
             </div>
 
             <div class="links-row">
-                <a href="/docs" target="_blank">📖 Swagger Gateway</a>
-                <a href="http://localhost:8003/docs" target="_blank">📖 Swagger ms-pagos</a>
-                <a href="http://localhost:8001/docs" target="_blank">📖 Swagger ms-reservas</a>
+                <a href="/docs" target="_blank">Swagger Gateway</a>
+                <a href="http://localhost:8003/docs" target="_blank">Swagger ms-pagos</a>
+                <a href="http://localhost:8001/docs" target="_blank">Swagger ms-reservas</a>
             </div>
         </div>
 
         <!-- Columna Derecha: Consola de Tráfico HTTP en Tiempo Real -->
         <div class="panel">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-                <h2>📡 Tráfico HTTP & Respuestas JSON</h2>
+                <h2>Consola de Respuestas (JSON)</h2>
                 <button onclick="limpiarConsola()" style="background:#334155;color:#f8fafc;border:0;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:12px;">Limpiar</button>
             </div>
             <div id="traffic-console" class="traffic-box">
                 <div class="traffic-entry">
-                    <span class="time">[Inicio]</span> Esperando peticiones... Presiona una acción a la izquierda para ver la comunicación entre microservicios.
+                    <span class="time">[Listo]</span> Presiona un boton a la izquierda para interactuar con los microservicios.
                 </div>
             </div>
         </div>
@@ -317,7 +314,7 @@
                 if (tipo === 'health') {
                     const res = await fetch(`${GATEWAY_URL}/health`);
                     const data = await res.json();
-                    logTraffic('HealthCheck Gateway & Servicios', 'GET', '/health', res.status, data);
+                    logTraffic('Healthcheck Servicios', 'GET', '/health', res.status, data);
                     chequearSalud();
                 } else if (tipo === 'listar_reservas') {
                     const res = await fetch(`${GATEWAY_URL}/reservas/`);
@@ -326,8 +323,8 @@
                 } else if (tipo === 'crear_reserva') {
                     const payload = {
                         cancha_id: 1,
-                        cancha_nombre: "Cancha Sintética Maracaná",
-                        cliente_nombre: "Cliente Demostración " + Math.floor(Math.random()*100),
+                        cancha_nombre: "Cancha Sintetica Maracana",
+                        cliente_nombre: "Cliente " + Math.floor(Math.random()*100),
                         fecha: "2026-11-10",
                         hora: "20:00 - 21:00",
                         monto: 80.00
@@ -339,7 +336,7 @@
                     });
                     const data = await res.json();
                     if (data.reserva) ultimaReservaId = data.reserva.id;
-                    logTraffic('Creación de Reserva PENDIENTE', 'POST', '/reservas/', res.status, data);
+                    logTraffic('Creacion de Reserva', 'POST', '/reservas/', res.status, data);
                 } else if (tipo === 'pagar_aprobado') {
                     const payload = {
                         metodo_pago: "Yape",
@@ -353,11 +350,10 @@
                     const data = await res.json();
                     logTraffic(`Pago Aprobado (ms-reservas -> ms-pagos)`, 'POST', `/reservas/${ultimaReservaId}/pagar`, res.status, data);
                 } else if (tipo === 'pagar_rechazado') {
-                    // Primero creamos una reserva para rechazar
                     const payloadReserva = {
                         cancha_id: 2,
                         cancha_nombre: "Cancha Techada El Golazo",
-                        cliente_nombre: "Cliente Rechazo " + Math.floor(Math.random()*100),
+                        cliente_nombre: "Cliente " + Math.floor(Math.random()*100),
                         fecha: "2026-11-11",
                         hora: "17:00 - 18:00",
                         monto: 120.00
@@ -384,10 +380,10 @@
                 } else if (tipo === 'ver_bd_pagos') {
                     const res = await fetch(`${GATEWAY_URL}/pagos/`);
                     const data = await res.json();
-                    logTraffic('Auditoría BD Propia ms-pagos', 'GET', '/pagos/', res.status, data);
+                    logTraffic('Base de Datos Propia (ms-pagos)', 'GET', '/pagos/', res.status, data);
                 }
             } catch (err) {
-                logTraffic('Error de Red en Petición', 'FETCH', GATEWAY_URL, 500, {error: err.message});
+                logTraffic('Error de Red', 'FETCH', GATEWAY_URL, 500, {error: err.message});
             }
         }
     </script>

@@ -1,8 +1,4 @@
-"""
-Base de datos aislada para ms-pagos (Database-per-Service).
-Utiliza SQLite para garantizar persistencia local independiente sin depender
-de bases de datos compartidas, respetando los principios de la arquitectura.
-"""
+# Base de datos local para ms-pagos (SQLite)
 import sqlite3
 import os
 from datetime import datetime

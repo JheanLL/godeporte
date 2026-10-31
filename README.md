@@ -1,89 +1,57 @@
-# 🏟️ GoDeporte - Arquitectura de Microservicios
-**Asignatura:** Taller de Desarrollo (ESTDD18) - 2026-II  
-**Universidad:** Universidad Nacional de Ucayali (UNU)  
+# GoDeporte - Microservicios
+**Proyecto:** Sistema de gestión y reserva de espacios deportivos  
+**Curso:** Taller de Desarrollo (UNU 2026-II)  
 **Docente:** Dr. León Esteban Flores Saldaña  
-**Estudiante / Responsable de Entrega:** Jhean Carlos Tecse Lozano (`ms-pagos`)
+
+### Integrantes y Servicios:
+- Jean Patrick Nieto Rodríguez (`ms-auth`, `ms-notificaciones`)
+- Jheferson Abel Portocarrero Tuesta (`ms-reservas`, `ms-canchas`)
+- Jhean Carlos Tecse Lozano (`ms-pagos`)
 
 ---
 
-## 📌 1. Aclaración del Alcance y Sílabo
-* **¿Se requiere Interfaz Gráfica (Frontend)?**  
-  **NO.** Tras revisar exhaustivamente el sílabo oficial del curso (Unidades I a IV), la asignatura se enfoca **100% en Arquitectura de Microservicios, Backend, Docker, Bases de Datos Distribuidas, Gateway y Monitoreo**. No existe ninguna unidad o contenido sobre desarrollo web frontend (HTML/React/Angular).
-* **¿Cómo se demuestra y expone?**  
-  La forma estándar y profesional en la industria y en este curso es a través de:
-  1. **Swagger UI (OpenAPI):** Documentación interactiva nativa donde se prueban todos los endpoints en vivo.
-  2. **Consola Visual / Test Runner (`http://localhost:8080/demo`):** Un panel ligero servido por el Gateway para ejecutar las pruebas con 1 clic frente al docente.
-  3. **Terminal Interactiva (`./probar_flujo.sh`):** Ejecución automatizada con cURL que muestra los flujos JSON y códigos HTTP.
+## 1. Estructura del Proyecto
 
----
-
-## 🏗️ 2. Arquitectura del Proyecto
-
-```
+```text
 godeporte/
-├── api-gateway/            # Puerto 8080: Punto de entrada único y enrutador dinámico
-│   ├── main.py
-│   └── Dockerfile
-├── ms-pagos/               # Puerto 8003: [PARTE DE JHEAN TECSE] Simulación y auditoría de pagos
-│   ├── main.py
-│   ├── database.py         # Base de datos propia SQLite (Database-per-Service)
-│   └── Dockerfile
-├── ms-reservas/            # Puerto 8001: Servicio colaborador (Gestión del estado de reservas)
-│   ├── main.py
-│   └── Dockerfile
-├── plantilla-servicio/     # Plantilla base para que Jean Patrick y Jheferson Abel creen sus servicios
-│   ├── main.py
-│   ├── README.md           # Guía paso a paso para el resto del grupo
-│   └── Dockerfile
-├── demo-visual/            # Panel HTML de demostración servido en http://localhost:8080/demo
-│   └── index.html
-├── iniciar_demo.sh         # Script de preparación y arranque en 1 clic
-├── detener_demo.sh         # Script para apagar y liberar puertos limpiamente
-├── probar_flujo.sh         # Script de pruebas automáticas con cURL
-├── docker-compose.yml      # Configuración de despliegue en contenedores Docker
-└── GUIA_EXPOSICION.md      # Guion y respuestas para la exposición ante el Dr. Flores
+├── api-gateway/            # Puerto 8080: Gateway y enrutador principal
+├── ms-pagos/               # Puerto 8003: Servicio de pagos con SQLite local
+├── ms-reservas/            # Puerto 8001: Servicio de reservas
+├── plantilla-servicio/     # Plantilla base para crear nuevos servicios
+├── demo-visual/            # Panel web de pruebas (http://localhost:8080/demo)
+├── docker-compose.yml      # Configuración de Docker
+├── iniciar_demo.sh         # Script para levantar los servicios
+├── detener_demo.sh         # Script para detener los servicios
+├── probar_flujo.sh         # Script de pruebas con curl
+└── GUIA_EXPOSICION.md      # Apuntes y preguntas para la exposición
 ```
 
 ---
 
-## ⚡ 3. Cómo Ejecutar para la Exposición (En 1 Clic)
+## 2. Cómo Ejecutar
 
-En la terminal de la PC de exposición, simplemente ejecuta:
+Desde la terminal en esta carpeta:
 
 ```bash
-cd ~/.gemini/antigravity/scratch/godeporte
+cd ~/Desktop/godeporte
 ./iniciar_demo.sh
 ```
 
-El script automáticamente:
-1. Crea/activa el entorno virtual de Python e instala dependencias (`fastapi`, `uvicorn`, `httpx`, `requests`).
-2. Verifica que los puertos estén libres.
-3. Levanta los microservicios en procesos y puertos separados:
-   - `API Gateway` ➔ `http://localhost:8080`
-   - `ms-reservas` ➔ `http://localhost:8001`
-   - `ms-pagos`    ➔ `http://localhost:8003`
-4. Comprueba el estado de salud de todos los servicios.
-5. Abre el navegador en la consola de demostración: **`http://localhost:8080/demo`**.
+El script se encarga de:
+1. Crear el entorno virtual e instalar las librerías si hace falta.
+2. Levantar cada servicio en segundo plano:
+   - **Gateway:** `http://localhost:8080`
+   - **Reservas:** `http://localhost:8001`
+   - **Pagos:** `http://localhost:8003`
+3. Abrir en el navegador el panel de control: `http://localhost:8080/demo`
 
-### Para probar el flujo por terminal:
-```bash
-./probar_flujo.sh
-```
-
-### Para apagar todo al terminar la exposición:
-```bash
-./detener_demo.sh
-```
+### Otros comandos:
+- Para probar el flujo por consola: `./probar_flujo.sh`
+- Para apagar todos los servicios: `./detener_demo.sh`
 
 ---
 
-## 🔗 4. Enlaces de Documentación Interactiva (Swagger)
-- **API Gateway (Centralizador):** [http://localhost:8080/docs](http://localhost:8080/docs)
-- **Consola de Demostración Visual:** [http://localhost:8080/demo](http://localhost:8080/demo)
-- **ms-pagos (Jhean Tecse):** [http://localhost:8003/docs](http://localhost:8003/docs)
-- **ms-reservas:** [http://localhost:8001/docs](http://localhost:8001/docs)
-
----
-
-## 👥 5. Para el Resto del Equipo (Jean Patrick y Jheferson Abel)
-Tienen disponible la carpeta **`plantilla-servicio/`** con su propio archivo `README.md`. Solo deben duplicarla, cambiar el nombre y puerto de su microservicio (ej. `ms-auth` en puerto 8004 o `ms-canchas` en puerto 8002) y registrarlo en `api-gateway/main.py`.
+## 3. Documentación de Endpoints (Swagger)
+- Gateway: [http://localhost:8080/docs](http://localhost:8080/docs)
+- ms-pagos: [http://localhost:8003/docs](http://localhost:8003/docs)
+- ms-reservas: [http://localhost:8001/docs](http://localhost:8001/docs)

@@ -1,57 +1,49 @@
-# 🚀 Guía Práctica para Desarrollar tu Microservicio (GoDeporte)
+# Guía para crear sus microservicios (GoDeporte)
 
-Esta plantilla fue preparada por **Jhean Carlos Tecse Lozano** como base y ejemplo funcional para que el equipo (**Jean Patrick** y **Jheferson Abel**) pueda desarrollar y practicar sus respectivos microservicios para el curso de **Taller de Desarrollo** (Dr. León Esteban Flores Saldaña).
+Muchachos, les dejo esta plantilla para que puedan avanzar su parte (ms-auth, ms-canchas, ms-notificaciones) y no tengamos problemas al juntar todo.
 
----
+### Puntos clave del curso:
+1. **Base de datos propia:** Cada servicio debe tener sus propios datos (no compartir la misma base de datos entre dos servicios).
+2. **Puertos separados:** Cada servicio corre en su propio puerto.
+3. **Comunicación:** Si un servicio necesita datos de otro, se piden por petición HTTP.
 
-## 🏛️ Los 3 Mandamientos Arquitectónicos del Curso
-1. **Responsabilidad Única (SRP):** Cada servicio hace **una sola función** de negocio.
-   - Si haces `ms-auth`: Solo te encargas de usuarios, logins y tokens.
-   - Si haces `ms-canchas`: Solo catálogo de canchas y tarifas.
-   - Si haces `ms-notificaciones`: Solo enviar tickets o mensajes.
-2. **Autonomía y Descentralización de Datos (Database-per-Service):**
-   - ❌ **ERROR GRAVE:** Compartir una base de datos entre microservicios (crea un monolito distribuido).
-   - ✅ **CORRECTO:** Tu servicio tiene sus propios archivos, tablas SQLite o colecciones. Nadie entra a tus datos directamente; si otro servicio necesita información, te la pide por HTTP.
-3. **Comunicación Sincrónica y Asincrónica:**
-   - Si necesitas una respuesta inmediata: HTTP REST (`requests` / `httpx`).
-   - Si es un aviso: Eventos Kafka (o simulación de eventos).
+### Pasos para crear su servicio:
 
----
+1. **Copiar la plantilla:**
+   Copia esta carpeta y cámbiale el nombre al servicio que te tocó:
+   ```bash
+   cp -r plantilla-servicio ms-auth
+   ```
 
-## 🛠️ Cómo crear tu propio microservicio paso a paso
+2. **Configurar nombre y puerto:**
+   Abre `main.py` de tu nuevo servicio y cambia:
+   - `ms-reservas`: Puerto 8001
+   - `ms-canchas`: Puerto 8002
+   - `ms-pagos`: Puerto 8003 (mi parte)
+   - `ms-auth`: Puerto 8004
+   - `ms-notificaciones`: Puerto 8005
 
-### Paso 1: Copiar la plantilla
-Copia esta carpeta y cámbiale el nombre al de tu servicio:
-```bash
-cp -r plantilla-servicio ms-auth
-```
+   Por ejemplo para auth:
+   ```python
+   NOMBRE_SERVICIO = "ms-auth"
+   PUERTO_SERVICIO = 8004
+   ```
 
-### Paso 2: Configurar tu puerto y rutas
-Abre `main.py` de tu nuevo microservicio y asigna su puerto correspondiente:
-- `ms-reservas`: Puerto `8001`
-- `ms-canchas`: Puerto `8002`
-- `ms-pagos`: Puerto `8003` (Implementado por Jhean)
-- `ms-auth`: Puerto `8004`
-- `ms-notificaciones`: Puerto `8005`
+3. **Probarlo en local:**
+   Para correr tu servicio de forma independiente:
+   ```bash
+   uvicorn main:app --reload --port 8004
+   ```
+   Puedes ver la documentación Swagger en:
+   - `http://localhost:8004/docs`
 
-Cambia `NOMBRE_SERVICIO = "ms-auth"` y `PUERTO_SERVICIO = 8004`.
-
-### Paso 3: Probar tu microservicio de forma independiente
-Levanta tu servicio en su propia terminal:
-```bash
-uvicorn main:app --reload --port 8004
-```
-Abre en tu navegador:
-- Documentación Swagger automática: `http://localhost:8004/docs`
-- Endpoint de salud: `http://localhost:8004/ms-auth/health`
-
-### Paso 4: Conectar tu servicio al API Gateway
-Abre el archivo `api-gateway/main.py` y agrega tu microservicio al diccionario de servicios:
-```python
-SERVICES = {
-    "pagos": "http://127.0.0.1:8003",
-    "reservas": "http://127.0.0.1:8001",
-    "auth": "http://127.0.0.1:8004",  # <--- Tu nuevo servicio
-}
-```
-¡Listo! A partir de ese momento, cualquier cliente que llame a `http://localhost:8080/auth/...` será enrutado automáticamente a tu microservicio.
+4. **Conectarlo al Gateway:**
+   Cuando tu servicio funcione, abres `api-gateway/main.py` y agregas la ruta:
+   ```python
+   SERVICES = {
+       "pagos": "http://127.0.0.1:8003",
+       "reservas": "http://127.0.0.1:8001",
+       "auth": "http://127.0.0.1:8004",  # <--- agregar aqui
+   }
+   ```
+   Con eso el Gateway ya puede enrutar las peticiones que lleguen a `/auth/*`.
