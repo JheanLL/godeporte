@@ -1,57 +1,54 @@
-# GoDeporte - Microservicios
-**Proyecto:** Sistema de gestión y reserva de espacios deportivos  
-**Curso:** Taller de Desarrollo (UNU 2026-II)  
-**Docente:** Dr. León Esteban Flores Saldaña  
+# GoDeporte
 
-### Integrantes y Servicios:
-- Jean Patrick Nieto Rodríguez (`ms-auth`, `ms-notificaciones`)
-- Jheferson Abel Portocarrero Tuesta (`ms-reservas`, `ms-canchas`)
-- Jhean Carlos Tecse Lozano (`ms-pagos`)
+Base de Taller de Desarrollo. Solo está implementado **ms-pagos**, con pagos simulados y datos en memoria que se pierden al reiniciar. No hay cobros reales ni Kafka.
 
----
+## Reparto
 
-## 1. Estructura del Proyecto
+| Responsable | Servicios | Puertos |
+| --- | --- | --- |
+| Jean Patrick Nieto Rodríguez | ms-auth, ms-notificaciones | 8004, 8005 |
+| Jheferson Abel Portocarrero Tuesta | ms-reservas, ms-canchas | 8001, 8002 |
+| Jhean Carlos Tecse Lozano | ms-pagos | 8003 |
 
-```text
-godeporte/
-├── api-gateway/            # Puerto 8080: Gateway y enrutador principal
-├── ms-pagos/               # Puerto 8003: Servicio de pagos con SQLite local
-├── ms-reservas/            # Puerto 8001: Servicio de reservas
-├── plantilla-servicio/     # Plantilla base para crear nuevos servicios
-├── demo-visual/            # Panel web de pruebas (http://localhost:8080/demo)
-├── docker-compose.yml      # Configuración de Docker
-├── iniciar_demo.sh         # Script para levantar los servicios
-├── detener_demo.sh         # Script para detener los servicios
-├── probar_flujo.sh         # Script de pruebas con curl
-└── GUIA_EXPOSICION.md      # Apuntes y preguntas para la exposición
-```
+Los demás servicios tienen instrucciones pendientes, no implementaciones. Sus responsables crean código, Dockerfile y pruebas de negocio. La propuesta DOCX y la presentación HTML representan también trabajo futuro.
 
----
-
-## 2. Cómo Ejecutar
-
-Desde la terminal en esta carpeta:
+## Ejecutar pagos
 
 ```bash
-cd ~/Desktop/godeporte
+docker compose --env-file /dev/null up --build ms-pagos
+```
+
+Abrir http://localhost:8003/docs. Para detener: Ctrl+C y `docker compose --env-file /dev/null stop ms-pagos`.
+
+Alternativa local (no demuestra Docker):
+
+```bash
+python3 -m venv venv
+venv/bin/python -m pip install -r requirements.txt
 ./iniciar_demo.sh
 ```
 
-El script se encarga de:
-1. Crear el entorno virtual e instalar las librerías si hace falta.
-2. Levantar cada servicio en segundo plano:
-   - **Gateway:** `http://localhost:8080`
-   - **Reservas:** `http://localhost:8001`
-   - **Pagos:** `http://localhost:8003`
-3. Abrir en el navegador el panel de control: `http://localhost:8080/demo`
+El script ejecuta solamente pagos en primer plano; Ctrl+C lo detiene.
 
-### Otros comandos:
-- Para probar el flujo por consola: `./probar_flujo.sh`
-- Para apagar todos los servicios: `./detener_demo.sh`
+## Pruebas
 
----
+Prueba automática de pagos; inicia un proceso propio en un puerto libre y lo cierra al terminar:
 
-## 3. Documentación de Endpoints (Swagger)
-- Gateway: [http://localhost:8080/docs](http://localhost:8080/docs)
-- ms-pagos: [http://localhost:8003/docs](http://localhost:8003/docs)
-- ms-reservas: [http://localhost:8001/docs](http://localhost:8001/docs)
+```bash
+venv/bin/python -m unittest discover -s tests -p 'test_pagos.py' -v
+```
+
+Con pagos ya iniciado, también se puede ejecutar `./probar_flujo.sh`.
+
+Para el grupo, seguir `plantilla-servicio/README.md`. Cuando cada compañero cree su código y Dockerfile:
+
+```bash
+docker compose --env-file /dev/null up --build -d
+venv/bin/python tests/comprobar_grupo.py
+```
+
+**La comprobación grupal debe fallar por ahora.** Enumera Dockerfiles pendientes, contenedores inactivos y endpoints de salud que no responden correctamente. Devuelve 1 si falta algo y 0 cuando los cinco servicios cumplen esas comprobaciones. Un proceso local sin contenedor no basta.
+
+Después del arranque ejecuta los contratos funcionales: registro/login, catálogo, reservas con pago aprobado/rechazado y aviso simulado. Ver `CONTRATOS.md`. Un healthcheck solo no basta para pasar. Cada integrante amplía las pruebas de su parte según las funciones que agregue.
+
+Los servicios se llaman directamente por HTTP dentro de Compose. No se incluye gateway en esta base. SQLite y la demo anterior se conservan en la rama local `codex/pagos-sqlite` para después. No agregar Redis, Kafka, JWT ni bases de datos en esta etapa.

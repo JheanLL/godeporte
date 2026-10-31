@@ -1,59 +1,59 @@
-# Apuntes para la Exposición - GoDeporte
-**Curso:** Taller de Desarrollo (Dr. León Esteban Flores Saldaña)  
-**Expositor:** Jhean Carlos Tecse Lozano  
-**Servicio a cargo:** `ms-pagos`
+# Guía grupal de exposición de GoDeporte
 
----
+## Alcance
 
-## 1. Sobre el alcance y el sílabo (¿Interfaz o Microservicios?)
+Explicamos el problema de organizar reservas, la separación de responsabilidades, la comunicación HTTP y Docker. Los datos son propios de cada servicio y están en memoria. Las guías del curso contienen ejemplos con Python y FastAPI.
 
-El profesor **no pidió interfaz gráfica ni desarrollo frontend**. 
+Cada integrante presenta lo que implementó. Los diagramas de la propuesta también representan trabajo futuro: no afirmar que ya hay Kafka, Redis, QR, bloqueo temporal de horarios o autenticación si aún no están implementados y comprobados.
 
-Revisando el sílabo oficial:
-- **Unidad 1:** Conceptos de microservicios, Docker, Git.
-- **Unidad 2:** Microservicios en Java, BD relacionales y no relacionales, Redis.
-- **Unidad 3:** Microservicios en otros lenguajes, Kafka, API Gateway, JWT.
-- **Unidad 4:** Configuración centralizada, Prometheus, Grafana, Kubernetes.
+## Reparto y orden
 
-En ningún punto hay desarrollo frontend (React, Angular o móvil). La evaluación se enfoca en que los microservicios funcionen, que corran en puertos independientes, que tengan su propia persistencia y que se comuniquen por la red. Para exponer, usamos Swagger UI (`/docs`) y el panel de control del Gateway.
+- Jean Patrick: autenticación y notificaciones.
+- Jheferson: canchas y reservas.
+- Jhean: pagos simulados.
 
----
+1. Explicar brevemente el problema y la división del sistema.
+2. Cada responsable explica qué recibe su servicio, qué devuelve y a quién llama.
+3. Mostrar el Dockerfile, el contenedor activo y el endpoint de salud de cada parte.
+4. Cada responsable demuestra un caso correcto y un error.
+5. Si la integración está terminada, mostrar la reserva y su pago; identificar con claridad las partes pendientes.
+6. Ejecutar la comprobación grupal y explicar su resultado real.
 
-## 2. Orden de la Exposición (Guion sugerido)
+Tener Dockerfile no demuestra que funcione: debe construirse y ejecutarse. El README contiene los comandos. No se necesita agregar un frontend para esta demostración.
 
-1. **Introducción del proyecto:**
-   - Explicar qué es GoDeporte: sistema para reservar canchas y complejos deportivos.
-   - El problema real: reservas duplicadas por WhatsApp, desorden en cuadernos, confirmaciones tardías.
-   - Solución propuesta: dividir el sistema en microservicios independientes.
+## Responsabilidad única
 
-2. **Mi responsabilidad en el equipo:**
-   - A mí me tocó **`ms-pagos`**.
-   - Su función es simular el cobro de la reserva, validar montos y registrar el comprobante en su propia base de datos (SQLite).
-   - Para poder mostrarlo en conjunto, también se implementó el **API Gateway** (puerto 8080) y un servicio de **reservas** (puerto 8001).
+Autenticación maneja acceso; canchas, catálogo; reservas, disponibilidad y estado de reservas; pagos, resultado del cobro simulado; notificaciones, avisos de prueba.
 
-3. **Demostración práctica en la PC:**
-   - Correr `./iniciar_demo.sh` para mostrar que los servicios arrancan en puertos distintos.
-   - Mostrar el Gateway en el puerto 8080 y la verificación de salud (`/health`).
-   - Crear una reserva en estado `PENDIENTE`.
-   - Simular el pago con Yape: mostrar que `ms-reservas` llama por HTTP a `ms-pagos` y la reserva cambia a `CONFIRMADA`.
-   - Simular un pago rechazado: mostrar que el servicio rechaza y la reserva cambia a `CANCELADA`.
-   - Mostrar que `ms-pagos` guarda su historial en su propia base de datos de manera aislada.
+Validar datos y registrar o consultar el resultado son parte de la misma responsabilidad. Pagos no administra usuarios ni canchas y no confirma la reserva: devuelve APROBADO o RECHAZADO; reservas decide su propio estado.
 
----
+## Cadena de llamadas
 
-## 3. Preguntas típicas del docente y cómo responder
+En clase se indicó colocar primero los servicios que esperan a otros y al final los más rápidos. El ejemplo mínimo es `reservas → pagos`: reservas espera; pagos calcula y devuelve el resultado sin llamar a otro microservicio.
 
-* **¿Por qué cada microservicio tiene su propia base de datos?**  
-  Para cumplir con el principio de descentralización de datos. Si dos servicios comparten la misma base de datos, se genera un monolito distribuido y se pierde la autonomía de despliegue.
+Pagos cumple la estructura de servicio terminal. Para afirmar cuál es más rápido hay que medir: no es una garantía universal ni se deben agregar pausas artificiales. Mantener la cadena corta. Si se necesitan avisos, reservas puede llamar después a notificaciones; pagos no coordina todo el sistema.
 
-* **¿Para qué sirve el API Gateway?**  
-  Es la puerta de entrada única del sistema (puerto 8080). Permite que el cliente haga peticiones a una sola dirección y el Gateway las redirige internamente al microservicio correspondiente.
+## Demostración de pagos
 
-* **¿Qué pasa si el servicio de pagos se apaga?**  
-  Hay aislamiento de fallos. El servicio de reservas detecta que pagos no responde y devuelve un error controlado (`503 Servicio no disponible`), evitando que todo el sistema se caiga.
+- Pago válido: APROBADO.
+- Otra reserva con rechazo forzado: RECHAZADO.
+- Consultar transacción e historial.
+- Monto cero: 400. Nombre vacío o reserva inválida: 422.
+- Repetir pago aprobado de una reserva: 409.
+- Reiniciar: el historial vuelve a estar vacío.
 
-* **¿La comunicación entre reservas y pagos es síncrona o asíncrona?**  
-  Es síncrona por HTTP/REST porque la reserva necesita la respuesta inmediata del cobro para confirmarse. Kafka se pensó para eventos posteriores asíncronos (como avisar al servicio de notificaciones para generar el comprobante sin hacer esperar al usuario).
+Yape, Plin, Tarjeta y Transferencia son opciones simuladas, no conexiones bancarias. En modo auto se rechazan montos mayores a 1000; los modos forzados permiten mostrar ambos resultados.
 
-* **¿Cómo se desplegaría esto en contenedores?**  
-  El proyecto ya tiene su `Dockerfile` para cada servicio y un `docker-compose.yml` para levantarlos juntos sobre una red interna de Docker.
+## Preguntas comunes
+
+**¿Por qué separar servicios?** Cada parte atiende una función de negocio y se ejecuta por separado.
+
+**¿Comparten datos?** No acceden a la memoria de otros servicios; intercambian datos por HTTP.
+
+**¿Por qué se pierde el historial?** Se usa memoria para esta entrega. La persistencia queda para después.
+
+**¿La comunicación es síncrona?** Sí: quien llama espera la respuesta HTTP.
+
+**¿Qué pasa si el otro servicio se apaga?** El llamador debe manejar la conexión fallida y limitar el tiempo de espera. Cada responsable debe implementarlo y probarlo; reservas todavía no está implementado en esta base.
+
+**¿Cómo sabemos si funciona la base grupal?** `tests/comprobar_grupo.py` exige Dockerfiles, contenedores activos y healthchecks; después prueba los casos de negocio de `CONTRATOS.md`. Cada integrante añade pruebas para las funciones adicionales de su parte.

@@ -1,52 +1,43 @@
-version: '3.8'
-
 services:
-  api-gateway:
-    build:
-      context: .
-      dockerfile: api-gateway/Dockerfile
-    container_name: godeporte-gateway
-    ports:
-      - "8080:8080"
-    environment:
-      - PAGOS_SERVICE_URL=http://ms-pagos:8003
-      - RESERVAS_SERVICE_URL=http://ms-reservas:8001
-    networks:
-      - godeporte-network
-    depends_on:
-      - ms-pagos
-      - ms-reservas
-    restart: unless-stopped
-
   ms-pagos:
     build:
       context: .
       dockerfile: ms-pagos/Dockerfile
-    container_name: godeporte-pagos
-    ports:
-      - "8003:8003"
-    volumes:
-      - pagos-data:/app/ms-pagos
-    networks:
-      - godeporte-network
-    restart: unless-stopped
+    ports: ["8003:8003"]
+    networks: [godeporte-network]
 
+  # Los responsables deben crear estos Dockerfiles y sus implementaciones.
   ms-reservas:
     build:
       context: .
       dockerfile: ms-reservas/Dockerfile
-    container_name: godeporte-reservas
-    ports:
-      - "8001:8001"
+    ports: ["8001:8001"]
     environment:
-      - MS_PAGOS_URL=http://ms-pagos:8003
-    networks:
-      - godeporte-network
-    restart: unless-stopped
+      MS_PAGOS_URL: http://ms-pagos:8003
+      MS_CANCHAS_URL: http://ms-canchas:8002
+      MS_NOTIFICACIONES_URL: http://ms-notificaciones:8005
+    networks: [godeporte-network]
 
-volumes:
-  pagos-data:
-    driver: local
+  ms-canchas:
+    build:
+      context: .
+      dockerfile: ms-canchas/Dockerfile
+    ports: ["8002:8002"]
+    networks: [godeporte-network]
+
+  ms-auth:
+    build:
+      context: .
+      dockerfile: ms-auth/Dockerfile
+    ports: ["8004:8004"]
+    networks: [godeporte-network]
+
+  ms-notificaciones:
+    build:
+      context: .
+      dockerfile: ms-notificaciones/Dockerfile
+    ports: ["8005:8005"]
+    networks: [godeporte-network]
 
 networks:
   godeporte-network:

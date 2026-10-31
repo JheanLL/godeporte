@@ -1,49 +1,37 @@
-# Guía para crear sus microservicios (GoDeporte)
+# Completar un servicio
 
-Muchachos, les dejo esta plantilla para que puedan avanzar su parte (ms-auth, ms-canchas, ms-notificaciones) y no tengamos problemas al juntar todo.
+Esta plantilla aporta solo arranque y salud; no implementa la función de negocio.
 
-### Puntos clave del curso:
-1. **Base de datos propia:** Cada servicio debe tener sus propios datos (no compartir la misma base de datos entre dos servicios).
-2. **Puertos separados:** Cada servicio corre en su propio puerto.
-3. **Comunicación:** Si un servicio necesita datos de otro, se piden por petición HTTP.
+| Servicio | Puerto | Salud |
+| --- | --- | --- |
+| ms-reservas | 8001 | /reservas/health |
+| ms-canchas | 8002 | /canchas/health |
+| ms-pagos | 8003 | /pagos/health |
+| ms-auth | 8004 | /auth/health |
+| ms-notificaciones | 8005 | /notificaciones/health |
 
-### Pasos para crear su servicio:
+La ruta de salud responde HTTP 200 y JSON con `status: "UP"`, `service` igual al nombre de la carpeta y `port` igual al puerto asignado.
 
-1. **Copiar la plantilla:**
-   Copia esta carpeta y cámbiale el nombre al servicio que te tocó:
-   ```bash
-   cp -r plantilla-servicio ms-auth
-   ```
+1. Copiar main.py y Dockerfile de esta plantilla a su carpeta, conservando su README.
+2. Cambiar nombre, ruta y puerto en main.py.
+3. Cambiar COPY, EXPOSE, --app-dir y --port del Dockerfile.
+4. Implementar su función y almacenamiento en memoria propio. Un healthcheck solo no completa la tarea.
+5. Usar requirements.txt compartido; agregar solo dependencias necesarias y acordadas.
+6. Desde la raíz ejecutar, por ejemplo: `docker compose --env-file /dev/null up --build ms-canchas`.
+7. En ese ejemplo abrir http://localhost:8002/docs y probar caso correcto e inválido.
+8. Añadir sus pruebas de negocio y documentar sus endpoints.
+9. Cuando todos estén listos, arrancar Compose completo y ejecutar `venv/bin/python tests/comprobar_grupo.py`.
 
-2. **Configurar nombre y puerto:**
-   Abre `main.py` de tu nuevo servicio y cambia:
-   - `ms-reservas`: Puerto 8001
-   - `ms-canchas`: Puerto 8002
-   - `ms-pagos`: Puerto 8003 (mi parte)
-   - `ms-auth`: Puerto 8004
-   - `ms-notificaciones`: Puerto 8005
+El contexto de construcción es la raíz. Dentro de Docker, llamar a `http://ms-pagos:8003`; desde la PC, a `http://localhost:8003`. Compose deja las URL de pagos, canchas y notificaciones disponibles para reservas; su responsable debe leerlas y usarlas según lo necesite. Usar tiempos de espera limitados y errores controlados; no crear ciclos entre servicios.
 
-   Por ejemplo para auth:
-   ```python
-   NOMBRE_SERVICIO = "ms-auth"
-   PUERTO_SERVICIO = 8004
-   ```
+## Contrato de pagos ya implementado
 
-3. **Probarlo en local:**
-   Para correr tu servicio de forma independiente:
-   ```bash
-   uvicorn main:app --reload --port 8004
-   ```
-   Puedes ver la documentación Swagger en:
-   - `http://localhost:8004/docs`
+POST /pagos/procesar recibe reserva_id positivo, cliente_nombre no vacío, monto positivo y metodo_pago (Yape, Plin, Tarjeta o Transferencia; por defecto Yape). simulacion_resultado opcional: auto, forzar_aprobado o forzar_rechazado.
 
-4. **Conectarlo al Gateway:**
-   Cuando tu servicio funcione, abres `api-gateway/main.py` y agregas la ruta:
-   ```python
-   SERVICES = {
-       "pagos": "http://127.0.0.1:8003",
-       "reservas": "http://127.0.0.1:8001",
-       "auth": "http://127.0.0.1:8004",  # <--- agregar aqui
-   }
-   ```
-   Con eso el Gateway ya puede enrutar las peticiones que lleguen a `/auth/*`.
+Devuelve transaccion_id, reserva_id, cliente_nombre, monto, metodo_pago, estado (APROBADO/RECHAZADO) y mensaje. Reservas decide su estado según ese resultado; pagos no llama a otro servicio.
+
+Consultas: GET /pagos/{transaccion_id}, GET /pagos/reserva/{reserva_id}, GET /pagos/.
+
+Errores: 400 monto no positivo, 422 datos inválidos, 404 consulta inexistente, 409 reserva con pago ya aprobado. Los rechazados permiten reintentar; los aprobados no se duplican mientras el proceso siga activo.
+
+`CONTRATOS.md` fija la base propuesta de endpoints y respuestas para los demás servicios y explica las pruebas funcionales que deben pasar. Si el equipo cambia un contrato, actualizar también sus consumidores y pruebas.
