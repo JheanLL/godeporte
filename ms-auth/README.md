@@ -2,6 +2,6 @@
 
 * **Responsable:** Jean Patrick Nieto Rodríguez
 * **Puerto:** `8004` (`http://localhost:8004/docs`)
-* **Base de datos local:** `auth.db` (SQLite)
+* **Base de datos local (ya creada):** [`database.py`](database.py) (`auth.db` con funciones `crear_usuario` y `autenticar_usuario`)
 
-Implementar aquí `main.py`, `database.py` y `Dockerfile` siguiendo las instrucciones de [`plantilla-servicio/README.md`](../plantilla-servicio/README.md) y los endpoints definidos en [`CONTRATOS.md`](../CONTRATOS.md).
+Solo falta agregar aquí **`main.py`** (importando las funciones de `database.py`) y **`Dockerfile`** siguiendo [`plantilla-servicio/README.md`](../plantilla-servicio/README.md) y [`CONTRATOS.md`](../CONTRATOS.md).

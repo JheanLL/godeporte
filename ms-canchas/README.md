@@ -2,6 +2,6 @@
 
 * **Responsable:** Jheferson Abel Portocarrero Tuesta
 * **Puerto:** `8002` (`http://localhost:8002/docs`)
-* **Base de datos local:** `canchas.db` (SQLite)
+* **Base de datos local (ya creada):** [`database.py`](database.py) (`canchas.db` con funciones `crear_cancha` y `listar_canchas`)
 
-Implementar aquí `main.py`, `database.py` y `Dockerfile` siguiendo las instrucciones de [`plantilla-servicio/README.md`](../plantilla-servicio/README.md) y los endpoints definidos en [`CONTRATOS.md`](../CONTRATOS.md).
+Solo falta agregar aquí **`main.py`** (importando las funciones de `database.py`) y **`Dockerfile`** siguiendo [`plantilla-servicio/README.md`](../plantilla-servicio/README.md) y [`CONTRATOS.md`](../CONTRATOS.md).

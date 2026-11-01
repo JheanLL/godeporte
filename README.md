@@ -15,7 +15,7 @@ Arquitectura basada en microservicios independientes con **FastAPI**, **Docker**
 | Jean Patrick Nieto Rodríguez | `ms-auth` | `8004` | `http://localhost:8004/docs` | `auth.db` (SQLite) |
 | Jean Patrick Nieto Rodríguez | `ms-notificaciones` | `8005` | `http://localhost:8005/docs` | `notificaciones.db` (SQLite) |
 
-En esta base se entrega implementado **`ms-pagos`** junto con la estructura de `docker-compose.yml` y la carpeta `plantilla-servicio/` para que cada responsable complete sus microservicios asignados.
+En esta base se entrega implementado **`ms-pagos`** completo, y en los otros cuatro servicios (`ms-reservas`, `ms-canchas`, `ms-auth`, `ms-notificaciones`) **ya se incluye creado su archivo `database.py`** con sus tablas SQLite y funciones listas, para que cada responsable solo tenga que crear su `main.py` y su `Dockerfile`.
 
 ---
 
