@@ -6,14 +6,21 @@ from typing import Optional, Literal
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
+from database import (
+    PagoYaAprobadoError,
+    guardar_pago,
+    init_db,
+    listar_pagos,
+    obtener_pago_por_id,
+    obtener_pago_por_reserva,
+)
 
-# Datos propios de esta demostracion: se pierden al reiniciar el proceso.
-# Ejecutar un solo proceso de Uvicorn; no se comparte memoria entre workers.
-PAGOS_DB = {}
+# Inicializar la base de datos SQLite propia del servicio
+init_db()
 
 app = FastAPI(
     title="ms-pagos - GoDeporte",
-    description="Simula pagos de reservas sin mover dinero real. Datos en memoria.",
+    description="Servicio de procesamiento y registro de pagos con base de datos local SQLite.",
     version="1.0"
 )
 
@@ -24,6 +31,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 class SolicitudPago(BaseModel):
     reserva_id: int = Field(gt=0)
@@ -40,6 +48,7 @@ class SolicitudPago(BaseModel):
             raise ValueError("El nombre del cliente no puede estar vacio.")
         return nombre
 
+
 class RespuestaPago(BaseModel):
     transaccion_id: str
     reserva_id: int
@@ -49,28 +58,26 @@ class RespuestaPago(BaseModel):
     estado: Literal["APROBADO", "RECHAZADO"]
     mensaje: str
 
+
 @app.get("/pagos/health")
 def health_check():
     return {
         "status": "UP",
         "service": "ms-pagos",
         "port": 8003,
-        "almacenamiento": "memoria"
+        "database": "sqlite"
     }
 
+
 @app.post("/pagos/procesar", response_model=RespuestaPago)
-async def procesar_pago(solicitud: SolicitudPago):
-    # Sin E/S ni await: comprobar y guardar ocurren juntos en el loop del proceso.
+def procesar_pago(solicitud: SolicitudPago):
     if solicitud.monto <= 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="El monto debe ser mayor a 0."
         )
 
-    if any(p["reserva_id"] == solicitud.reserva_id and p["estado"] == "APROBADO" for p in PAGOS_DB.values()):
-        raise HTTPException(status_code=409, detail="La reserva ya tiene un pago aprobado.")
-
-    transaccion_id = f"PAG-{uuid.uuid4().hex.upper()}"
+    transaccion_id = f"PAG-{uuid.uuid4().hex[:8].upper()}"
 
     if solicitud.simulacion_resultado == "forzar_rechazado":
         estado = "RECHAZADO"
@@ -86,21 +93,25 @@ async def procesar_pago(solicitud: SolicitudPago):
             estado = "APROBADO"
             mensaje = f"Pago aprobado exitosamente mediante {solicitud.metodo_pago}."
 
-    pago = RespuestaPago(
-        transaccion_id=transaccion_id,
-        reserva_id=solicitud.reserva_id,
-        cliente_nombre=solicitud.cliente_nombre,
-        monto=solicitud.monto,
-        metodo_pago=solicitud.metodo_pago,
-        estado=estado,
-        mensaje=mensaje
-    )
-    PAGOS_DB[transaccion_id] = pago.model_dump()
-    return pago
+    try:
+        registro = guardar_pago(
+            transaccion_id=transaccion_id,
+            reserva_id=solicitud.reserva_id,
+            cliente_nombre=solicitud.cliente_nombre,
+            monto=solicitud.monto,
+            metodo_pago=solicitud.metodo_pago,
+            estado=estado,
+            mensaje=mensaje,
+        )
+    except PagoYaAprobadoError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+    return RespuestaPago(**registro)
+
 
 @app.get("/pagos/{transaccion_id}", response_model=RespuestaPago)
 def consultar_pago(transaccion_id: str):
-    pago = PAGOS_DB.get(transaccion_id)
+    pago = obtener_pago_por_id(transaccion_id)
     if not pago:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -108,9 +119,10 @@ def consultar_pago(transaccion_id: str):
         )
     return pago
 
+
 @app.get("/pagos/reserva/{reserva_id}", response_model=RespuestaPago)
 def consultar_pago_reserva(reserva_id: int):
-    pago = next((p for p in reversed(list(PAGOS_DB.values())) if p["reserva_id"] == reserva_id), None)
+    pago = obtener_pago_por_reserva(reserva_id)
     if not pago:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -118,10 +130,12 @@ def consultar_pago_reserva(reserva_id: int):
         )
     return pago
 
+
 @app.get("/pagos/")
 def obtener_historial_pagos():
+    transacciones = listar_pagos()
     return {
         "servicio": "ms-pagos",
-        "total": len(PAGOS_DB),
-        "transacciones": list(reversed(list(PAGOS_DB.values())))
+        "total": len(transacciones),
+        "transacciones": transacciones
     }

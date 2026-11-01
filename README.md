@@ -1,54 +1,70 @@
-# GoDeporte
+# GoDeporte — Sistema de Reserva de Espacios Deportivos
 
-Base de Taller de Desarrollo. Solo está implementado **ms-pagos**, con pagos simulados y datos en memoria que se pierden al reiniciar. No hay cobros reales ni Kafka.
+Proyecto de la asignatura **Taller de Desarrollo** (VIII Ciclo — Ingeniería de Sistemas, UNU).  
+Arquitectura basada en microservicios independientes con **FastAPI**, **Docker** y base de datos local **SQLite** por servicio.
 
-## Reparto
+---
 
-| Responsable | Servicios | Puertos |
-| --- | --- | --- |
-| Jean Patrick Nieto Rodríguez | ms-auth, ms-notificaciones | 8004, 8005 |
-| Jheferson Abel Portocarrero Tuesta | ms-reservas, ms-canchas | 8001, 8002 |
-| Jhean Carlos Tecse Lozano | ms-pagos | 8003 |
+## 1. Distribución de microservicios
 
-Los demás servicios tienen instrucciones pendientes, no implementaciones. Sus responsables crean código, Dockerfile y pruebas de negocio. La propuesta DOCX y la presentación HTML representan también trabajo futuro.
+| Integrante | Microservicio | Puerto | Swagger UI (Localhost) | Base de datos local |
+| --- | --- | --- | --- | --- |
+| Jheferson Abel Portocarrero Tuesta | `ms-reservas` | `8001` | `http://localhost:8001/docs` | `reservas.db` (SQLite) |
+| Jheferson Abel Portocarrero Tuesta | `ms-canchas` | `8002` | `http://localhost:8002/docs` | `canchas.db` (SQLite) |
+| Jhean Carlos Tecse Lozano | `ms-pagos` | `8003` | `http://localhost:8003/docs` | `pagos.db` (SQLite) |
+| Jean Patrick Nieto Rodríguez | `ms-auth` | `8004` | `http://localhost:8004/docs` | `auth.db` (SQLite) |
+| Jean Patrick Nieto Rodríguez | `ms-notificaciones` | `8005` | `http://localhost:8005/docs` | `notificaciones.db` (SQLite) |
 
-## Ejecutar pagos
+En esta base se entrega implementado **`ms-pagos`** junto con la estructura de `docker-compose.yml` y la carpeta `plantilla-servicio/` para que cada responsable complete sus microservicios asignados.
 
-```bash
-docker compose --env-file /dev/null up --build ms-pagos
-```
+---
 
-Abrir http://localhost:8003/docs. Para detener: Ctrl+C y `docker compose --env-file /dev/null stop ms-pagos`.
+## 2. Base de datos independiente por servicio (SQLite)
 
-Alternativa local (no demuestra Docker):
+Para cumplir el principio de **Autonomía y Descentralización de Datos (*Database-per-Service*)**, cada microservicio gestiona su propia base de datos local mediante **`sqlite3`**:
 
-```bash
-python3 -m venv venv
-venv/bin/python -m pip install -r requirements.txt
-./iniciar_demo.sh
-```
+* `sqlite3` forma parte de la librería estándar de Python (ya viene preinstalado en Python y en la imagen `python:3.11-slim` de Docker, por lo que no requiere instalar paquetes externos ni motores adicionales).
+* Al iniciar cada servicio, la función `init_db()` en `database.py` crea automáticamente su archivo `.db` y su tabla si aún no existen.
+* Ningún servicio accede al archivo `.db` de otro; toda comunicación entre microservicios se realiza por HTTP REST.
 
-El script ejecuta solamente pagos en primer plano; Ctrl+C lo detiene.
+---
 
-## Pruebas
+## 3. Ejecución con Docker
 
-Prueba automática de pagos; inicia un proceso propio en un puerto libre y lo cierra al terminar:
+1. **Iniciar el servicio de Docker** (si no está activo):
+   ```bash
+   sudo systemctl start docker
+   ```
 
-```bash
-venv/bin/python -m unittest discover -s tests -p 'test_pagos.py' -v
-```
+2. **Construir y levantar un servicio individual** (por ejemplo, `ms-pagos`):
+   ```bash
+   docker compose --env-file /dev/null up --build -d ms-pagos
+   ```
 
-Con pagos ya iniciado, también se puede ejecutar `./probar_flujo.sh`.
+3. **Verificar que el contenedor esté corriendo:**
+   ```bash
+   docker ps
+   ```
 
-Para el grupo, seguir `plantilla-servicio/README.md`. Cuando cada compañero cree su código y Dockerfile:
+4. **Abrir el localhost del servicio en el navegador:**
+   * Interfaz interactiva (Swagger): `http://localhost:8003/docs`
+   * Estado del servicio (Healthcheck): `http://localhost:8003/pagos/health`
 
-```bash
-docker compose --env-file /dev/null up --build -d
-venv/bin/python tests/comprobar_grupo.py
-```
+5. **Levantar todos los servicios del grupo** (cuando los cinco tengan su `Dockerfile` y código):
+   ```bash
+   docker compose --env-file /dev/null up --build -d
+   ```
 
-**La comprobación grupal debe fallar por ahora.** Enumera Dockerfiles pendientes, contenedores inactivos y endpoints de salud que no responden correctamente. Devuelve 1 si falta algo y 0 cuando los cinco servicios cumplen esas comprobaciones. Un proceso local sin contenedor no basta.
+6. **Detener contenedores:**
+   ```bash
+   docker compose --env-file /dev/null stop
+   ```
 
-Después del arranque ejecuta los contratos funcionales: registro/login, catálogo, reservas con pago aprobado/rechazado y aviso simulado. Ver `CONTRATOS.md`. Un healthcheck solo no basta para pasar. Cada integrante amplía las pruebas de su parte según las funciones que agregue.
+---
 
-Los servicios se llaman directamente por HTTP dentro de Compose. No se incluye gateway en esta base. SQLite y la demo anterior se conservan en la rama local `codex/pagos-sqlite` para después. No agregar Redis, Kafka, JWT ni bases de datos en esta etapa.
+## 4. Documentación del repositorio
+
+* [`GUIA_EXPOSICION.md`](GUIA_EXPOSICION.md): Orden de presentación, flujo de prueba en Swagger y conceptos clave.
+* [`CONTRATOS.md`](CONTRATOS.md): Rutas, datos de entrada y respuestas JSON de cada microservicio.
+* [`plantilla-servicio/README.md`](plantilla-servicio/README.md): Guía paso a paso para crear un microservicio con FastAPI, SQLite y Docker.
+* `desarrollo/`: Scripts auxiliares y pruebas automatizadas utilizadas durante el desarrollo.

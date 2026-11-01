@@ -1,14 +1,11 @@
-"""Comprobacion real de arranque del grupo; falla mientras falten servicios.
-
-No sustituye las pruebas funcionales de cada integrante.
-"""
+"""Comprobacion de arranque de los cinco servicios del grupo."""
 import json
 from pathlib import Path
 import subprocess
 import sys
 from urllib.request import urlopen
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 SERVICIOS = {
     'ms-reservas': (8001, 'reservas'),
     'ms-canchas': (8002, 'canchas'),
@@ -28,11 +25,11 @@ def comprobar():
                 body = json.load(response)
                 if (response.status != 200 or body.get('status') != 'UP'
                         or body.get('service') != nombre or body.get('port') != puerto):
-                    pendientes.append(f'{nombre}: healthcheck no cumple el contrato del README.')
+                    pendientes.append(f'{nombre}: healthcheck no cumple el formato esperado.')
                 else:
                     print(f'OK HTTP: {nombre} en puerto {puerto}')
         except (OSError, ValueError, AttributeError) as error:
-            pendientes.append(f'{nombre}: no responde correctamente /{ruta}/health ({type(error).__name__}).')
+            pendientes.append(f'{nombre}: no responde en /{ruta}/health ({type(error).__name__}).')
 
     try:
         result = subprocess.run(
@@ -40,27 +37,27 @@ def comprobar():
             cwd=ROOT, capture_output=True, text=True, timeout=15,
         )
         if result.returncode:
-            pendientes.append('Docker: no se pudo consultar Compose. Revisar daemon y permisos; ejecutar docker compose --env-file /dev/null ps.')
+            pendientes.append('Docker: no se pudo consultar Compose.')
         else:
             raw = result.stdout.strip()
             containers = json.loads(raw) if raw.startswith('[') else [json.loads(line) for line in raw.splitlines() if line.strip()]
             activos = {item.get('Service') for item in containers if item.get('State') == 'running'}
             for nombre in SERVICIOS:
                 if nombre not in activos:
-                    pendientes.append(f'{nombre}: falta su contenedor Compose activo.')
+                    pendientes.append(f'{nombre}: contenedor inactivo en Docker Compose.')
                 else:
                     print(f'OK Docker: {nombre}')
     except (OSError, subprocess.TimeoutExpired, ValueError, AttributeError):
-        pendientes.append('Docker: falta instalar/configurar Compose o no responde correctamente.')
+        pendientes.append('Docker: Compose no disponible o inactivo.')
 
     if pendientes:
-        print('\nGRUPO PENDIENTE (esperado mientras los companeros completan su parte):')
+        print('\nServicios pendientes por completar:')
         for pendiente in pendientes:
             print(f'- {pendiente}')
         return 1
-    print('\nOK: Dockerfiles, contenedores y healthchecks. Probando contratos de negocio...', flush=True)
+    print('\nOK: Dockerfiles, contenedores y healthchecks activos. Ejecutando pruebas de integracion...', flush=True)
     result = subprocess.run(
-        [sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_grupo.py', '-v'],
+        [sys.executable, '-m', 'unittest', 'discover', '-s', 'desarrollo/tests', '-p', 'test_grupo.py', '-v'],
         cwd=ROOT,
     )
     return 0 if result.returncode == 0 else 1

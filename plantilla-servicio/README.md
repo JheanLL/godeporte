@@ -1,37 +1,50 @@
-# Completar un servicio
+# Guía para Implementar un Microservicio
 
-Esta plantilla aporta solo arranque y salud; no implementa la función de negocio.
+Esta carpeta contiene los archivos base (`main.py`, `database.py` y `Dockerfile`) para crear cualquiera de los microservicios pendientes usando **FastAPI** y **SQLite**.
 
-| Servicio | Puerto | Salud |
-| --- | --- | --- |
-| ms-reservas | 8001 | /reservas/health |
-| ms-canchas | 8002 | /canchas/health |
-| ms-pagos | 8003 | /pagos/health |
-| ms-auth | 8004 | /auth/health |
-| ms-notificaciones | 8005 | /notificaciones/health |
+---
 
-La ruta de salud responde HTTP 200 y JSON con `status: "UP"`, `service` igual al nombre de la carpeta y `port` igual al puerto asignado.
+## Tabla de puertos y rutas de salud
 
-1. Copiar main.py y Dockerfile de esta plantilla a su carpeta, conservando su README.
-2. Cambiar nombre, ruta y puerto en main.py.
-3. Cambiar COPY, EXPOSE, --app-dir y --port del Dockerfile.
-4. Implementar su función y almacenamiento en memoria propio. Un healthcheck solo no completa la tarea.
-5. Usar requirements.txt compartido; agregar solo dependencias necesarias y acordadas.
-6. Desde la raíz ejecutar, por ejemplo: `docker compose --env-file /dev/null up --build ms-canchas`.
-7. En ese ejemplo abrir http://localhost:8002/docs y probar caso correcto e inválido.
-8. Añadir sus pruebas de negocio y documentar sus endpoints.
-9. Cuando todos estén listos, arrancar Compose completo y ejecutar `venv/bin/python tests/comprobar_grupo.py`.
+| Carpeta | Puerto | Endpoint de salud | Archivo SQLite sugerido |
+| --- | --- | --- | --- |
+| `ms-reservas` | `8001` | `/reservas/health` | `reservas.db` |
+| `ms-canchas` | `8002` | `/canchas/health` | `canchas.db` |
+| `ms-pagos` | `8003` | `/pagos/health` | `pagos.db` |
+| `ms-auth` | `8004` | `/auth/health` | `auth.db` |
+| `ms-notificaciones` | `8005` | `/notificaciones/health` | `notificaciones.db` |
 
-El contexto de construcción es la raíz. Dentro de Docker, llamar a `http://ms-pagos:8003`; desde la PC, a `http://localhost:8003`. Compose deja las URL de pagos, canchas y notificaciones disponibles para reservas; su responsable debe leerlas y usarlas según lo necesite. Usar tiempos de espera limitados y errores controlados; no crear ciclos entre servicios.
+---
 
-## Contrato de pagos ya implementado
+## Pasos para completar tu servicio
 
-POST /pagos/procesar recibe reserva_id positivo, cliente_nombre no vacío, monto positivo y metodo_pago (Yape, Plin, Tarjeta o Transferencia; por defecto Yape). simulacion_resultado opcional: auto, forzar_aprobado o forzar_rechazado.
+1. **Copiar los archivos base:**
+   Copia `main.py`, `database.py` y `Dockerfile` de `plantilla-servicio/` dentro de la carpeta de tu microservicio (por ejemplo, `ms-canchas/`).
 
-Devuelve transaccion_id, reserva_id, cliente_nombre, monto, metodo_pago, estado (APROBADO/RECHAZADO) y mensaje. Reservas decide su estado según ese resultado; pagos no llama a otro servicio.
+2. **Configurar la base de datos local (`database.py`):**
+   * Python ya incluye el módulo `sqlite3` de fábrica, por lo que no necesitas instalar nada adicional.
+   * En `database.py`, cambia el nombre del archivo `.db` (por ejemplo, `canchas.db`) y define la tabla `CREATE TABLE IF NOT EXISTS ...` con las columnas de tu servicio.
+   * Puedes tomar como referencia completa el archivo `ms-pagos/database.py`.
 
-Consultas: GET /pagos/{transaccion_id}, GET /pagos/reserva/{reserva_id}, GET /pagos/.
+3. **Programar los endpoints (`main.py`):**
+   * Actualiza `NOMBRE_SERVICIO`, `RUTA_SERVICIO` y `PUERTO_SERVICIO`.
+   * Agrega las rutas indicadas en [`CONTRATOS.md`](../CONTRATOS.md).
 
-Errores: 400 monto no positivo, 422 datos inválidos, 404 consulta inexistente, 409 reserva con pago ya aprobado. Los rechazados permiten reintentar; los aprobados no se duplican mientras el proceso siga activo.
+4. **Ajustar el `Dockerfile`:**
+   Reemplaza `ms-ejemplo` y el puerto `8006` por el nombre de tu carpeta y tu puerto asignado:
+   ```dockerfile
+   FROM python:3.11-slim
+   WORKDIR /app
+   COPY requirements.txt .
+   RUN pip install --no-cache-dir -r requirements.txt
+   COPY ms-canchas/ ./ms-canchas/
+   EXPOSE 8002
+   CMD ["uvicorn", "main:app", "--app-dir", "/app/ms-canchas", "--host", "0.0.0.0", "--port", "8002"]
+   ```
 
-`CONTRATOS.md` fija la base propuesta de endpoints y respuestas para los demás servicios y explica las pruebas funcionales que deben pasar. Si el equipo cambia un contrato, actualizar también sus consumidores y pruebas.
+5. **Levantar con Docker y probar en Swagger:**
+   Desde la carpeta raíz del proyecto:
+   ```bash
+   docker compose --env-file /dev/null up --build -d ms-canchas
+   ```
+   Luego abre en tu navegador `http://localhost:8002/docs` para probar tus endpoints y tomar la captura del servicio funcionando.

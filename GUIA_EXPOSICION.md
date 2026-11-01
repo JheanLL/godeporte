@@ -1,59 +1,85 @@
-# Guía grupal de exposición de GoDeporte
+# Guía de Exposición — GoDeporte
 
-## Alcance
+## 1. Objetivo de la demostración
 
-Explicamos el problema de organizar reservas, la separación de responsabilidades, la comunicación HTTP y Docker. Los datos son propios de cada servicio y están en memoria. Las guías del curso contienen ejemplos con Python y FastAPI.
+Presentar la arquitectura de microservicios del sistema **GoDeporte**, demostrando:
+1. **Principio de Responsabilidad Única (SRP):** Cada servicio resuelve una única función de negocio.
+2. **Base de datos por servicio (*Database-per-Service*):** Cada microservicio posee su propio archivo de base de datos local en **SQLite** (`sqlite3` nativo de Python), sin compartir tablas con otros servicios.
+3. **Contenerización con Docker:** Cada microservicio cuenta con su `Dockerfile`, su contenedor independiente y su puerto expuesto en `localhost`.
+4. **Comunicación HTTP:** Los servicios se comunican mediante peticiones HTTP REST sincrónicas.
 
-Cada integrante presenta lo que implementó. Los diagramas de la propuesta también representan trabajo futuro: no afirmar que ya hay Kafka, Redis, QR, bloqueo temporal de horarios o autenticación si aún no están implementados y comprobados.
+---
 
-## Reparto y orden
+## 2. Distribución del equipo y puertos
 
-- Jean Patrick: autenticación y notificaciones.
-- Jheferson: canchas y reservas.
-- Jhean: pagos simulados.
+| Responsable | Microservicio | Función principal | Localhost (Swagger) |
+| --- | --- | --- | --- |
+| Jean Patrick Nieto | `ms-auth` | Registro e inicio de sesión de usuarios | `http://localhost:8004/docs` |
+| Jean Patrick Nieto | `ms-notificaciones` | Generación de confirmaciones de reserva | `http://localhost:8005/docs` |
+| Jheferson Portocarrero | `ms-canchas` | Catálogo de canchas y tarifas | `http://localhost:8002/docs` |
+| Jheferson Portocarrero | `ms-reservas` | Disponibilidad, creación y estado de reservas | `http://localhost:8001/docs` |
+| Jhean Carlos Tecse | `ms-pagos` | Procesamiento de pagos y registro de transacciones | `http://localhost:8003/docs` |
 
-1. Explicar brevemente el problema y la división del sistema.
-2. Cada responsable explica qué recibe su servicio, qué devuelve y a quién llama.
-3. Mostrar el Dockerfile, el contenedor activo y el endpoint de salud de cada parte.
-4. Cada responsable demuestra un caso correcto y un error.
-5. Si la integración está terminada, mostrar la reserva y su pago; identificar con claridad las partes pendientes.
-6. Ejecutar la comprobación grupal y explicar su resultado real.
+---
 
-Tener Dockerfile no demuestra que funcione: debe construirse y ejecutarse. El README contiene los comandos. No se necesita agregar un frontend para esta demostración.
+## 3. Orden sugerido para presentar cada servicio
 
-## Responsabilidad única
+Para cada microservicio, el responsable muestra tres elementos:
 
-Autenticación maneja acceso; canchas, catálogo; reservas, disponibilidad y estado de reservas; pagos, resultado del cobro simulado; notificaciones, avisos de prueba.
+1. **Docker y código:**
+   * Mostrar el `Dockerfile`, `database.py` (conexión SQLite) y `main.py`.
+   * Mostrar en terminal con `docker ps` que el contenedor está en ejecución.
+2. **Estado del servicio (`health`):**
+   * Abrir `http://localhost:<puerto>/<ruta>/health` y mostrar que responde `"status": "UP"` y `"database": "sqlite"`.
+3. **Prueba funcional desde Swagger (`/docs`):**
+   * Abrir `http://localhost:<puerto>/docs`.
+   * Ejecutar un caso exitoso y un caso de validación o rechazo.
+   * Consultar los registros guardados en la base de datos SQLite del servicio.
 
-Validar datos y registrar o consultar el resultado son parte de la misma responsabilidad. Pagos no administra usuarios ni canchas y no confirma la reserva: devuelve APROBADO o RECHAZADO; reservas decide su propio estado.
+---
 
-## Cadena de llamadas
+## 4. Demostración de `ms-pagos` (Puerto 8003)
 
-En clase se indicó colocar primero los servicios que esperan a otros y al final los más rápidos. El ejemplo mínimo es `reservas → pagos`: reservas espera; pagos calcula y devuelve el resultado sin llamar a otro microservicio.
+Con el contenedor activo (`docker compose --env-file /dev/null up --build -d ms-pagos`), abrir **`http://localhost:8003/docs`**:
 
-Pagos cumple la estructura de servicio terminal. Para afirmar cuál es más rápido hay que medir: no es una garantía universal ni se deben agregar pausas artificiales. Mantener la cadena corta. Si se necesitan avisos, reservas puede llamar después a notificaciones; pagos no coordina todo el sistema.
+1. **Caso aprobado (`POST /pagos/procesar`):**
+   * Hacer clic en **Try it out**, ingresar el siguiente JSON y pulsar **Execute**:
+     ```json
+     {
+       "reserva_id": 1,
+       "cliente_nombre": "Juan Perez",
+       "monto": 80,
+       "metodo_pago": "Yape"
+     }
+     ```
+   * Respuesta `200 OK`: devuelve `"estado": "APROBADO"` y el código `transaccion_id`, quedando guardado en `pagos.db` (SQLite).
 
-## Demostración de pagos
+2. **Caso rechazado (`POST /pagos/procesar`):**
+   * Probar con `reserva_id: 2` y `monto: 1500` (en modo automático se rechazan montos mayores a S/ 1000, o usando `"simulacion_resultado": "forzar_rechazado"`).
+   * Respuesta `200 OK`: devuelve `"estado": "RECHAZADO"` y registra el intento en la base de datos.
 
-- Pago válido: APROBADO.
-- Otra reserva con rechazo forzado: RECHAZADO.
-- Consultar transacción e historial.
-- Monto cero: 400. Nombre vacío o reserva inválida: 422.
-- Repetir pago aprobado de una reserva: 409.
-- Reiniciar: el historial vuelve a estar vacío.
+3. **Consulta en la base de datos (`GET /pagos/`):**
+   * Ejecutar `GET /pagos/` desde Swagger para listar las transacciones almacenadas en SQLite.
 
-Yape, Plin, Tarjeta y Transferencia son opciones simuladas, no conexiones bancarias. En modo auto se rechazan montos mayores a 1000; los modos forzados permiten mostrar ambos resultados.
+4. **Control de duplicados (`409 Conflict`):**
+   * Si se intenta volver a pagar la `reserva_id: 1` (que ya fue aprobada), el servicio devuelve error `409: La reserva ya tiene un pago aprobado`.
 
-## Preguntas comunes
+---
 
-**¿Por qué separar servicios?** Cada parte atiende una función de negocio y se ejecuta por separado.
+## 5. Cadena de llamadas entre servicios
 
-**¿Comparten datos?** No acceden a la memoria de otros servicios; intercambian datos por HTTP.
+En el flujo de reserva y pago (`ms-reservas` → `ms-pagos`):
+* **`ms-reservas`** actúa como servicio coordinador: verifica disponibilidad, registra la reserva como `PENDIENTE` en `reservas.db` y realiza la petición HTTP a `ms-pagos`.
+* **`ms-pagos`** es el servicio terminal de la cadena: no depende de otros microservicios, procesa la solicitud, registra la transacción en `pagos.db` y responde de inmediato `APROBADO` o `RECHAZADO`.
+* Según esa respuesta, `ms-reservas` actualiza el estado de la reserva a `CONFIRMADA` o `CANCELADA`.
 
-**¿Por qué se pierde el historial?** Se usa memoria para esta entrega. La persistencia queda para después.
+---
 
-**¿La comunicación es síncrona?** Sí: quien llama espera la respuesta HTTP.
+## 6. Preguntas frecuentes en clase
 
-**¿Qué pasa si el otro servicio se apaga?** El llamador debe manejar la conexión fallida y limitar el tiempo de espera. Cada responsable debe implementarlo y probarlo; reservas todavía no está implementado en esta base.
-
-**¿Cómo sabemos si funciona la base grupal?** `tests/comprobar_grupo.py` exige Dockerfiles, contenedores activos y healthchecks; después prueba los casos de negocio de `CONTRATOS.md`. Cada integrante añade pruebas para las funciones adicionales de su parte.
+* **¿Por qué usar SQLite en cada microservicio?**  
+  Porque `sqlite3` ya viene incluido en Python, no requiere servidores externos pesados y permite que cada contenedor mantenga su propio archivo `.db` independiente, cumpliendo la regla de *Database-per-Service*.
+* **¿Cómo se comunican los contenedores dentro de Docker?**  
+  A través de la red bridge `godeporte-network` definida en `docker-compose.yml`. Desde el navegador en la PC se accede por `localhost:<puerto>`, mientras que entre contenedores se llaman por el nombre del servicio (por ejemplo, `http://ms-pagos:8003`).
+* **¿Qué ocurre si un microservicio se detiene?**  
+  El servicio que intenta llamarlo captura el error de conexión y responde con código `503 Service Unavailable`, evitando que todo el sistema se caiga (aislamiento de fallos).

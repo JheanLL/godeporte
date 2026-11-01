@@ -1,6 +1,7 @@
-"""Pruebas HTTP de pagos con un proceso propio y sin tocar la demo abierta."""
+"""Pruebas HTTP de pagos con SQLite aislado en un archivo temporal."""
 import concurrent.futures
 import json
+import os
 from pathlib import Path
 import socket
 import subprocess
@@ -11,7 +12,7 @@ import unittest
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 class PagosHTTP(unittest.TestCase):
@@ -19,6 +20,7 @@ class PagosHTTP(unittest.TestCase):
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory()
         cls.addClassCleanup(cls.temp.cleanup)
+        cls.db_path = str(Path(cls.temp.name) / 'test_pagos.db')
         cls.start_service()
         cls.addClassCleanup(cls.stop_service)
 
@@ -29,10 +31,12 @@ class PagosHTTP(unittest.TestCase):
             port = sock.getsockname()[1]
         cls.url = f'http://127.0.0.1:{port}'
         cls.log = open(Path(cls.temp.name) / 'uvicorn.log', 'w+')
+        env = os.environ.copy()
+        env['PAGOS_DB_PATH'] = cls.db_path
         cls.process = subprocess.Popen(
             [sys.executable, '-m', 'uvicorn', 'main:app', '--app-dir',
              str(ROOT / 'ms-pagos'), '--host', '127.0.0.1', '--port', str(port)],
-            cwd=cls.temp.name, stdout=cls.log, stderr=subprocess.STDOUT,
+            cwd=cls.temp.name, env=env, stdout=cls.log, stderr=subprocess.STDOUT,
         )
         deadline = time.monotonic() + 10
         while time.monotonic() < deadline:
@@ -78,7 +82,7 @@ class PagosHTTP(unittest.TestCase):
         code, body = self.request('GET', '/pagos/health')
         self.assertEqual(code, 200)
         self.assertEqual(body['service'], 'ms-pagos')
-        self.assertEqual(body['almacenamiento'], 'memoria')
+        self.assertEqual(body['database'], 'sqlite')
 
     def test_aprobacion_consultas_historial(self):
         code, pago = self.pay(101)
@@ -131,12 +135,13 @@ class PagosHTTP(unittest.TestCase):
             respuestas = list(executor.map(lambda _: self.pay(108)[0], range(4)))
         self.assertEqual(sorted(respuestas), [200, 409, 409, 409])
 
-    def test_z_reinicio_borra_historial(self):
-        self.assertEqual(self.pay(109)[0], 200)
+    def test_z_reinicio_persiste_en_sqlite(self):
+        code, pago = self.pay(109)
+        self.assertEqual(code, 200)
         self.stop_service()
         self.start_service()
-        self.assertEqual(self.request('GET', '/pagos/')[1]['total'], 0)
-        self.assertEqual(self.request('GET', '/pagos/reserva/109')[0], 404)
+        self.assertGreaterEqual(self.request('GET', '/pagos/')[1]['total'], 1)
+        self.assertEqual(self.request('GET', '/pagos/reserva/109'), (200, pago))
 
 
 if __name__ == '__main__':

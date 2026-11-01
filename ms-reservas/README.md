@@ -1,5 +1,7 @@
-# ms-reservas pendiente
+# Microservicio de Reservas (`ms-reservas`)
 
-Responsable: Jheferson. Debe implementar disponibilidad y estados de reservas; llamar a pagos y decidir si confirma o cancela.
+* **Responsable:** Jheferson Abel Portocarrero Tuesta
+* **Puerto:** `8001` (`http://localhost:8001/docs`)
+* **Base de datos local:** `reservas.db` (SQLite)
 
-Crear aquí el código y Dockerfile siguiendo `plantilla-servicio/README.md`. Añadir pruebas funcionales de su parte. La comprobación grupal seguirá fallando mientras falte este servicio.
+Implementar aquí `main.py`, `database.py` y `Dockerfile` siguiendo las instrucciones de [`plantilla-servicio/README.md`](../plantilla-servicio/README.md) y los endpoints definidos en [`CONTRATOS.md`](../CONTRATOS.md).

@@ -1,5 +1,7 @@
 .git
 venv
+desarrollo
+*.pdf
 **/__pycache__
 **/*.pyc
 **/*.db
@@ -11,7 +13,3 @@ venv
 **/*.secrets
 **/.credentials
 **/*.credentials
-tests
-task.md
-*.docx
-presentacion.html
