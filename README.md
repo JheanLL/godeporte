@@ -85,3 +85,17 @@ venv/bin/python desarrollo/tests/comprobar_grupo.py
 ```
 
 SQLite permanece al detener/reiniciar el mismo contenedor; sin volúmenes, recrearlo puede borrar sus datos. Usar solo datos ficticios: autenticación es una demostración académica, no un sistema de acceso para producción.
+
+## Windows y Linux
+
+En Windows instalar y abrir Docker Desktop desde Inicio; esperar a que el motor esté activo y usar contenedores Linux (WSL 2). Abrir la carpeta del proyecto en Terminal/PowerShell. En Linux iniciar Docker con `sudo systemctl start docker` si hace falta. Los comandos `docker compose` y las direcciones Swagger son iguales en ambos sistemas.
+
+Solo para las pruebas automáticas, en Windows con Python instalado:
+
+```powershell
+py -m venv venv
+.\venv\Scripts\python.exe -m pip install -r requirements.txt
+.\venv\Scripts\python.exe desarrollo/tests/comprobar_grupo.py
+```
+
+No hace falta activar venv ni usar scripts .sh para ejecutar Docker y probar con Swagger. Referencia: https://docs.docker.com/desktop/setup/install/windows-install/
