@@ -6,3 +6,7 @@ __pycache__/
 *.db
 .env
 .DS_Store
+
+# Material interno se distribuye fuera del proyecto.
+/desarrollo/
+/godeporte-desarrollo/
