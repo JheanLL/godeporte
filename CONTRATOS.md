@@ -108,3 +108,7 @@ Todos los servicios incluyen:
 * **`POST /notificaciones/confirmar`**: Registra en `notificaciones.db` el envío del comprobante de reserva.
   * **Entrada:** `{ "reserva_id": 101, "cliente_nombre": "Juan Perez", "mensaje": "Reserva confirmada" }`
   * **Respuesta (200 OK):** `{ "notificacion_id": 1, "reserva_id": 101, "cliente_nombre": "Juan Perez", "estado": "ENVIADA", "mensaje": "Reserva confirmada" }`
+
+## Estado integrado
+
+Los cinco servicios están implementados. Notificaciones también ofrece `GET /notificaciones/` para listar avisos simulados. En reservas no se permite pagar otra vez una reserva CONFIRMADA o CANCELADA (409); para una cancelada se crea una nueva solicitud. No hay envío automático de avisos desde reservas: se demuestra mediante el endpoint propio de notificaciones.

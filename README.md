@@ -15,7 +15,7 @@ Arquitectura basada en microservicios independientes con **FastAPI**, **Docker**
 | Jean Patrick Nieto Rodríguez | `ms-auth` | `8004` | `http://localhost:8004/docs` | `auth.db` (SQLite) |
 | Jean Patrick Nieto Rodríguez | `ms-notificaciones` | `8005` | `http://localhost:8005/docs` | `notificaciones.db` (SQLite) |
 
-En esta base se entrega implementado **`ms-pagos`** completo, y en los otros cuatro servicios (`ms-reservas`, `ms-canchas`, `ms-auth`, `ms-notificaciones`) **ya se incluye creado su archivo `database.py`** con sus tablas SQLite y funciones listas, para que cada responsable solo tenga que crear su `main.py` y su `Dockerfile`.
+Los cinco servicios están implementados. Se integró autenticación y notificaciones de la entrega GODEPORTE-A y se completaron canchas y reservas. Los avisos y pagos son simulados.
 
 ---
 
@@ -38,7 +38,7 @@ Para cumplir el principio de **Autonomía y Descentralización de Datos (*Databa
 
 2. **Construir y levantar un servicio individual** (por ejemplo, `ms-pagos`):
    ```bash
-   docker compose --env-file /dev/null up --build -d ms-pagos
+   docker compose up --build -d ms-pagos
    ```
 
 3. **Verificar que el contenedor esté corriendo:**
@@ -50,14 +50,14 @@ Para cumplir el principio de **Autonomía y Descentralización de Datos (*Databa
    * Interfaz interactiva (Swagger): `http://localhost:8003/docs`
    * Estado del servicio (Healthcheck): `http://localhost:8003/pagos/health`
 
-5. **Levantar todos los servicios del grupo** (cuando los cinco tengan su `Dockerfile` y código):
+5. **Levantar todos los servicios del grupo** (los cinco servicios):
    ```bash
-   docker compose --env-file /dev/null up --build -d
+   docker compose up --build -d
    ```
 
 6. **Detener contenedores:**
    ```bash
-   docker compose --env-file /dev/null stop
+   docker compose stop
    ```
 
 ---
@@ -68,3 +68,20 @@ Para cumplir el principio de **Autonomía y Descentralización de Datos (*Databa
 * [`CONTRATOS.md`](CONTRATOS.md): Rutas, datos de entrada y respuestas JSON de cada microservicio.
 * [`plantilla-servicio/README.md`](plantilla-servicio/README.md): Guía paso a paso para crear un microservicio con FastAPI, SQLite y Docker.
 * `desarrollo/`: Scripts auxiliares y pruebas automatizadas utilizadas durante el desarrollo.
+
+## Prueba rápida
+
+```bash
+docker compose up --build -d
+docker compose ps
+```
+
+Abrir el Swagger del servicio (tabla anterior). En canchas crear una cancha; en reservas crear una reserva con ese id y pagarla mediante `/reservas/{id}/pagar`. Verificar CONFIRMADA para aprobado y CANCELADA para rechazo.
+
+Comprobación automática (requiere venv con requirements instalados):
+
+```bash
+venv/bin/python desarrollo/tests/comprobar_grupo.py
+```
+
+SQLite permanece al detener/reiniciar el mismo contenedor; sin volúmenes, recrearlo puede borrar sus datos. Usar solo datos ficticios: autenticación es una demostración académica, no un sistema de acceso para producción.

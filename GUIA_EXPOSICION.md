@@ -40,7 +40,7 @@ Para cada microservicio, el responsable muestra tres elementos:
 
 ## 4. Demostración de `ms-pagos` (Puerto 8003)
 
-Con el contenedor activo (`docker compose --env-file /dev/null up --build -d ms-pagos`), abrir **`http://localhost:8003/docs`**:
+Con el contenedor activo (`docker compose up --build -d ms-pagos`), abrir **`http://localhost:8003/docs`**:
 
 1. **Caso aprobado (`POST /pagos/procesar`):**
    * Hacer clic en **Try it out**, ingresar el siguiente JSON y pulsar **Execute**:
@@ -83,3 +83,7 @@ En el flujo de reserva y pago (`ms-reservas` → `ms-pagos`):
   A través de la red bridge `godeporte-network` definida en `docker-compose.yml`. Desde el navegador en la PC se accede por `localhost:<puerto>`, mientras que entre contenedores se llaman por el nombre del servicio (por ejemplo, `http://ms-pagos:8003`).
 * **¿Qué ocurre si un microservicio se detiene?**  
   El servicio que intenta llamarlo captura el error de conexión y responde con código `503 Service Unavailable`, evitando que todo el sistema se caiga (aislamiento de fallos).
+
+## Estado integrado
+
+Los cinco servicios tienen código y Dockerfile. Comando único: `docker compose up --build -d`. Contenedores: `docker compose ps`. Las pruebas están en desarrollo/tests. La autenticación guarda datos ficticios para la demostración; no usar contraseñas reales.

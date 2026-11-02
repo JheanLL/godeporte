@@ -1,7 +1,8 @@
-# Estado de Desarrollo
+# Estado de desarrollo
 
-- **Goal:** Base grupal de GoDeporte con `ms-pagos` usando SQLite (`sqlite3` nativo de Python), guía Markdown y PDF formal para el equipo, y scripts/pruebas de desarrollo organizados en `desarrollo/`.
-- **Done:** Implementación completa de `ms-pagos/database.py` y `ms-pagos/main.py` con SQLite (`pagos.db`) e índice único parcial para evitar pagos aprobados duplicados; `plantilla-servicio/database.py` para los compañeros; movimiento de pruebas y scripts a `desarrollo/`; actualización de `README.md`, `GUIA_EXPOSICION.md`, `CONTRATOS.md` y regeneración del PDF `GoDeporte_guia_del_equipo.pdf`.
-- **Next:** Cada compañero completa sus microservicios asignados siguiendo `plantilla-servicio/` y `CONTRATOS.md`.
-- **Open questions:** Ninguna.
-- **Branch/worktree:** `main` en `/home/jhean/Desktop/godeporte`.
+- Goal: integrar entrega GODEPORTE-A y completar canchas/reservas con código simple.
+- Done: auth/notificaciones integrados; import sqlite3 faltante corregido; canchas y reservas implementados; comandos Compose cortos; PDF actualizado solo en páginas 1, 3, 4 y 7. Se conservan 2, 5 y 6 intactas.
+- Validation: 10 pruebas HTTP de pagos; 4 contratos de integración por HTTP local y Docker; cinco contenedores/healthchecks correctos; prueba de pagos apagado devuelve 503. Bases temporales para validación local.
+- Next: practicar demostración con Swagger. Docker activo con los cinco servicios. Datos SQLite sin volúmenes, avisos simulados y autenticación académica.
+- Branch/worktree: codex/pagos-memoria en work/godeporte, base main 8a7970a; integrar en main solicitado. Sin push.
+- Open questions: ninguna.

@@ -42,6 +42,6 @@ Por lo tanto, cada responsable solo debe enfocarse en crear su **`main.py`** (en
 4. **Levantar con Docker y probar en Swagger:**
    Desde la carpeta raíz del proyecto:
    ```bash
-   docker compose --env-file /dev/null up --build -d ms-canchas
+   docker compose up --build -d ms-canchas
    ```
    Luego abre en tu navegador `http://localhost:8002/docs` para probar tus endpoints y tomar la captura del servicio funcionando.

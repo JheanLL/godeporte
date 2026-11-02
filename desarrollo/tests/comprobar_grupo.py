@@ -33,7 +33,7 @@ def comprobar():
 
     try:
         result = subprocess.run(
-            ['docker', 'compose', '--env-file', '/dev/null', 'ps', '--format', 'json'],
+            ['docker', 'compose', 'ps', '--format', 'json'],
             cwd=ROOT, capture_output=True, text=True, timeout=15,
         )
         if result.returncode:

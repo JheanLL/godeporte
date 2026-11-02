@@ -1,6 +1,6 @@
 """Contratos funcionales del grupo: requieren los servicios reales iniciados.
 
-Ver CONTRATOS.md. Se agregan registros ficticios en memoria.
+Ver CONTRATOS.md. Se agregan registros ficticios a SQLite.
 """
 import json
 from datetime import date, timedelta

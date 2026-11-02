@@ -1,7 +1,9 @@
-# Microservicio de Autenticación (`ms-auth`)
+# ms-auth
 
-* **Responsable:** Jean Patrick Nieto Rodríguez
-* **Puerto:** `8004` (`http://localhost:8004/docs`)
-* **Base de datos local (ya creada):** [`database.py`](database.py) (`auth.db` con funciones `crear_usuario` y `autenticar_usuario`)
+Implementado con FastAPI y SQLite local. Ejecutar desde la raíz:
 
-Solo falta agregar aquí **`main.py`** (importando las funciones de `database.py`) y **`Dockerfile`** siguiendo [`plantilla-servicio/README.md`](../plantilla-servicio/README.md) y [`CONTRATOS.md`](../CONTRATOS.md).
+```bash
+docker compose up --build -d ms-auth
+```
+
+Consultar puertos y rutas en README.md y CONTRATOS.md.
