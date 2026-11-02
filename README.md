@@ -1,101 +1,54 @@
-# GoDeporte — Sistema de Reserva de Espacios Deportivos
+# GoDeporte
 
-Proyecto de la asignatura **Taller de Desarrollo** (VIII Ciclo — Ingeniería de Sistemas, UNU).  
-Arquitectura basada en microservicios independientes con **FastAPI**, **Docker** y base de datos local **SQLite** por servicio.
+Sistema de gestión y reserva de espacios deportivos. Proyecto de Taller de Desarrollo, Ingeniería de Sistemas, Universidad Nacional de Ucayali.
 
----
+## Integrantes
 
-## 1. Distribución de microservicios
+- Jean Patrick Nieto Rodríguez: autenticación y notificaciones.
+- Jheferson Abel Portocarrero Tuesta: canchas y reservas.
+- Jhean Carlos Tecse Lozano: pagos.
 
-| Integrante | Microservicio | Puerto | Swagger UI (Localhost) | Base de datos local |
-| --- | --- | --- | --- | --- |
-| Jheferson Abel Portocarrero Tuesta | `ms-reservas` | `8001` | `http://localhost:8001/docs` | `reservas.db` (SQLite) |
-| Jheferson Abel Portocarrero Tuesta | `ms-canchas` | `8002` | `http://localhost:8002/docs` | `canchas.db` (SQLite) |
-| Jhean Carlos Tecse Lozano | `ms-pagos` | `8003` | `http://localhost:8003/docs` | `pagos.db` (SQLite) |
-| Jean Patrick Nieto Rodríguez | `ms-auth` | `8004` | `http://localhost:8004/docs` | `auth.db` (SQLite) |
-| Jean Patrick Nieto Rodríguez | `ms-notificaciones` | `8005` | `http://localhost:8005/docs` | `notificaciones.db` (SQLite) |
+## Ejecución
 
-Los cinco servicios están implementados. Se integró autenticación y notificaciones de la entrega GODEPORTE-A y se completaron canchas y reservas. Los avisos y pagos son simulados.
-
----
-
-## 2. Base de datos independiente por servicio (SQLite)
-
-Para cumplir el principio de **Autonomía y Descentralización de Datos (*Database-per-Service*)**, cada microservicio gestiona su propia base de datos local mediante **`sqlite3`**:
-
-* `sqlite3` forma parte de la librería estándar de Python (ya viene preinstalado en Python y en la imagen `python:3.11-slim` de Docker, por lo que no requiere instalar paquetes externos ni motores adicionales).
-* Al iniciar cada servicio, la función `init_db()` en `database.py` crea automáticamente su archivo `.db` y su tabla si aún no existen.
-* Ningún servicio accede al archivo `.db` de otro; toda comunicación entre microservicios se realiza por HTTP REST.
-
----
-
-## 3. Ejecución con Docker
-
-1. **Iniciar el servicio de Docker** (si no está activo):
-   ```bash
-   sudo systemctl start docker
-   ```
-
-2. **Construir y levantar un servicio individual** (por ejemplo, `ms-pagos`):
-   ```bash
-   docker compose up --build -d ms-pagos
-   ```
-
-3. **Verificar que el contenedor esté corriendo:**
-   ```bash
-   docker ps
-   ```
-
-4. **Abrir el localhost del servicio en el navegador:**
-   * Interfaz interactiva (Swagger): `http://localhost:8003/docs`
-   * Estado del servicio (Healthcheck): `http://localhost:8003/pagos/health`
-
-5. **Levantar todos los servicios del grupo** (los cinco servicios):
-   ```bash
-   docker compose up --build -d
-   ```
-
-6. **Detener contenedores:**
-   ```bash
-   docker compose stop
-   ```
-
----
-
-## 4. Documentación del repositorio
-
-* [`GUIA_EXPOSICION.md`](GUIA_EXPOSICION.md): Orden de presentación, flujo de prueba en Swagger y conceptos clave.
-* [`CONTRATOS.md`](CONTRATOS.md): Rutas, datos de entrada y respuestas JSON de cada microservicio.
-* [`plantilla-servicio/README.md`](plantilla-servicio/README.md): Guía paso a paso para crear un microservicio con FastAPI, SQLite y Docker.
-* `desarrollo/`: Scripts auxiliares y pruebas automatizadas utilizadas durante el desarrollo.
-
-## Prueba rápida
+Requiere Docker y Docker Compose instalados, con el motor de Docker activo. Desde la carpeta del proyecto:
 
 ```bash
 docker compose up --build -d
 docker compose ps
 ```
 
-Abrir el Swagger del servicio (tabla anterior). En canchas crear una cancha; en reservas crear una reserva con ese id y pagarla mediante `/reservas/{id}/pagar`. Verificar CONFIRMADA para aprobado y CANCELADA para rechazo.
-
-Comprobación automática (requiere venv con requirements instalados):
+Para ejecutar únicamente pagos:
 
 ```bash
-venv/bin/python desarrollo/tests/comprobar_grupo.py
+docker compose up --build -d ms-pagos
 ```
 
-SQLite permanece al detener/reiniciar el mismo contenedor; sin volúmenes, recrearlo puede borrar sus datos. Usar solo datos ficticios: autenticación es una demostración académica, no un sistema de acceso para producción.
+## Servicios
 
-## Windows y Linux
+| Servicio | Función | Documentación interactiva |
+| --- | --- | --- |
+| ms-reservas | Creación, consulta y estado de reservas | http://localhost:8001/docs |
+| ms-canchas | Registro y catálogo de canchas | http://localhost:8002/docs |
+| ms-pagos | Simulación y registro de pagos | http://localhost:8003/docs |
+| ms-auth | Registro e inicio de sesión | http://localhost:8004/docs |
+| ms-notificaciones | Registro de avisos simulados | http://localhost:8005/docs |
 
-En Windows instalar y abrir Docker Desktop desde Inicio; esperar a que el motor esté activo y usar contenedores Linux (WSL 2). Abrir la carpeta del proyecto en Terminal/PowerShell. En Linux iniciar Docker con `sudo systemctl start docker` si hace falta. Los comandos `docker compose` y las direcciones Swagger son iguales en ambos sistemas.
+Cada servicio usa FastAPI y una base SQLite independiente. Los pagos y avisos son simulados; no hay cobros ni envíos reales.
 
-Solo para las pruebas automáticas, en Windows con Python instalado:
+## Prueba del flujo
 
-```powershell
-py -m venv venv
-.\venv\Scripts\python.exe -m pip install -r requirements.txt
-.\venv\Scripts\python.exe desarrollo/tests/comprobar_grupo.py
+1. En Swagger de canchas, crear una cancha con nombre y tarifa.
+2. En Swagger de reservas, crear una reserva con el identificador de esa cancha, fecha, horario y monto.
+3. Ejecutar `/reservas/{id}/pagar` con `metodo_pago: "Yape"` y `simulacion_resultado: "forzar_aprobado"`. La reserva pasa a CONFIRMADA.
+4. Crear otra reserva en un horario diferente y usar `forzar_rechazado`. La reserva pasa a CANCELADA.
+5. Consultar los resultados en los endpoints de reservas y pagos.
+
+En Swagger se abre el endpoint, se pulsa **Try it out**, se completan los datos y se pulsa **Execute**.
+
+## Detener
+
+```bash
+docker compose stop
 ```
 
-No hace falta activar venv ni usar scripts .sh para ejecutar Docker y probar con Swagger. Referencia: https://docs.docker.com/desktop/setup/install/windows-install/
+Los datos permanecen al reiniciar el mismo contenedor; recrearlo puede borrarlos al no utilizar volúmenes persistentes.

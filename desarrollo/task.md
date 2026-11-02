@@ -6,3 +6,5 @@
 - Next: practicar demostración con Swagger. Docker activo con los cinco servicios. Datos SQLite sin volúmenes, avisos simulados y autenticación académica.
 - Branch/worktree: codex/pagos-memoria en work/godeporte, base main 8a7970a; integrar en main solicitado. Sin push.
 - Open questions: ninguna.
+
+- Organización: README raíz para entrega al docente; material interno movido a desarrollo/guias, desarrollo/documentos y desarrollo/plantilla-servicio. ZIP de entrega excluye desarrollo, entornos y bases locales.
