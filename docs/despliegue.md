@@ -47,26 +47,11 @@ Si aparecen los campos avanzados, usa **Classic** como tipo, **2** particiones, 
 
 Pulsa **Create topic** y verifica que `godeporte-pagos` aparezca en **Topics**.
 
-### 3.3 Activar Kafka REST y localizar la conexión
+### 3.3 Conectar Kafka REST con Cloudflare
 
-1. En el servicio Kafka, abre **Service settings → Service management → Actions (…) → Enable REST API (Karapace)** y confirma con **Enable**. Si el proxy ya está activo, pasa al paso 2. [Activar el REST Proxy](https://aiven.io/docs/products/kafka/karapace/howto/enable-karapace).
-2. Vuelve a **Overview → Connection information → Apache Kafka REST**. Toma el origen HTTPS, incluido el puerto si aparece. Ese valor va en `KAFKA_URL` en el paso 3.4.
-3. En **Users**, elige un usuario del servicio y usa su nombre y contraseña para el paso 3.4. Si está habilitada la autorización del REST Proxy, comprueba que el usuario pueda publicar y consumir en `godeporte-pagos` y usar el grupo `godeporte-academico-reservas`. [Usuarios del servicio](https://aiven.io/docs/products/kafka/howto/add-manage-service-users).
-
-Si la pantalla muestra **SASL/SCRAM** y **Client certificate**, estás en la conexión directa al broker. Vuelve a **Service settings** y sigue el paso 1.
-
-### 3.4 Guardar la conexión en los dos Workers
-
-Abre el [panel de Cloudflare](https://dash.cloudflare.com/) en la cuenta académica. Busca **Workers & Pages**, abre **godeporte-academico-pagos → Settings → Variables and Secrets → Add** y completa:
-
-| Type | Variable name | Value |
-| --- | --- | --- |
-| **Text** | `KAFKA_URL` | Origen de Kafka REST. Ejemplo ficticio `https://kafka-academico.example.test:24443`. |
-| **Secret** | `KAFKA_AUTH` | El encabezado Basic del usuario de servicio. Se obtiene con el comando de abajo. |
-
-Guarda primero `KAFKA_URL` con **Deploy** y repite en **godeporte-academico-reservas**. El bloque de terminal guarda `KAFKA_AUTH` en los dos Workers, así que puedes dejar esa fila para el CLI. El despliegue ya fija `KAFKA_TOPIC=godeporte-pagos`. [Variables y secretos de Workers](https://developers.cloudflare.com/workers/configuration/secrets/).
-
-Para guardar `KAFKA_AUTH` en ambos Workers sin mostrarlo, ejecuta este bloque en tu terminal Bash desde el repositorio, con Wrangler autenticado. Escribe el usuario y la contraseña del **service user** al recibir los prompts. El comando genera el prefijo `Basic ` y codifica `usuario:contraseña`. Si tienes varias cuentas de Cloudflare, selecciona la académica antes de ejecutarlo.
+1. **Activa el proxy en Aiven.** En el servicio Kafka abre **Service settings → Service management → Actions (…) → Enable REST API (Karapace)** y confirma con **Enable**. Si ya está activo, continúa. [Activar el REST Proxy](https://aiven.io/docs/products/kafka/karapace/howto/enable-karapace).
+2. **Guarda la URL en Cloudflare.** En Aiven abre **Overview → Connection information → Apache Kafka REST** y copia la URL HTTPS con su puerto si aparece. En [Cloudflare](https://dash.cloudflare.com/), abre **Workers & Pages → godeporte-academico-pagos → Settings → Variables and Secrets → Add**. Selecciona **Text**, escribe `KAFKA_URL` como nombre, pega la URL como valor y pulsa **Deploy**. Repite en **godeporte-academico-reservas**.
+3. **Guarda la autenticación en ambos Workers.** En Aiven, abre **Users** y elige un usuario del servicio. En una terminal Bash desde el repositorio, con Wrangler autenticado en la cuenta académica, ejecuta el bloque de abajo e introduce el nombre y la contraseña de ese usuario cuando se pidan. El bloque configura `KAFKA_AUTH` en ambos Workers. Si el REST Proxy aplica ACL, el usuario debe poder publicar y consumir en `godeporte-pagos` y usar el grupo `godeporte-academico-reservas`. [Usuarios del servicio](https://aiven.io/docs/products/kafka/howto/add-manage-service-users).
 
 ```bash
 (
