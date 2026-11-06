@@ -13,6 +13,8 @@ export type Env = {
   REDIS_URL: string
   REDIS_TOKEN?: string
   KAFKA_URL: string
+  KAFKA_USER?: string
+  KAFKA_PASSWORD?: string
   KAFKA_AUTH?: string
   KAFKA_TOPIC: string
   WEB_ORIGIN: string
@@ -24,6 +26,14 @@ export type Env = {
   AVISOS: Queue<Notice>
 }
 export type App = { Bindings: Env }
+
+export function kafkaAuthorization(env: Pick<Env, 'KAFKA_USER' | 'KAFKA_PASSWORD' | 'KAFKA_AUTH'>) {
+  if (env.KAFKA_USER && env.KAFKA_PASSWORD) {
+    const bytes = new TextEncoder().encode(`${env.KAFKA_USER}:${env.KAFKA_PASSWORD}`)
+    return 'Basic ' + btoa(String.fromCharCode(...bytes))
+  }
+  return env.KAFKA_AUTH
+}
 
 export function fail(status: 400 | 401 | 403 | 404 | 409 | 502 | 503, message: string): never {
   throw new HTTPException(status, { message })

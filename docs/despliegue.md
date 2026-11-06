@@ -55,31 +55,14 @@ Pulsa **Create topic** y verifica que `godeporte-pagos` aparezca en **Topics**.
    En **Produce a message**, mira la dirección del primer `curl`. Si la dirección tiene la forma `https://USUARIO:CONTRASEÑA@kafka.example.test:13189/topics/godeporte-pagos`, el valor para GoDeporte es `https://kafka.example.test:13189`. En tu caso usa el host y puerto que aparecen entre `@` y `/topics/`. Puedes dejar vacío el campo `base_uri`.
 
 3. **Guarda la URL en Cloudflare.** Abre **Workers & Pages → godeporte-academico-pagos → Settings → Variables and Secrets → Add**. Selecciona **Text**, escribe `KAFKA_URL`, pega la URL HTTPS del paso 2 y pulsa **Deploy**. Repite en **godeporte-academico-reservas**.
-4. **Guarda `KAFKA_AUTH` en Cloudflare desde tu terminal local.**
+4. **Guarda el usuario y la contraseña en Cloudflare.** En Aiven, dentro del servicio Kafka, abre **Users** y busca el usuario seleccionado en el paso 2. En Cloudflare, entra a **Workers & Pages → godeporte-academico-pagos → Settings → Variables and Secrets → Add**. Agrega estas dos filas, pulsa **Deploy** y repite en **godeporte-academico-reservas**. [Secretos de Cloudflare Workers](https://developers.cloudflare.com/workers/configuration/secrets/).
 
-   1. **En Aiven**, vuelve al comando **Produce a message** del paso 2. El nombre de usuario es lo que aparece entre `https://` y el primer `:` (por ejemplo, `avnadmin`). Usa la contraseña original de ese mismo usuario. Si solo ves `<redacted>`, abre **Users** dentro del servicio Kafka, busca ese usuario y consulta su contraseña.
-   2. **En tu computadora**, abre Bash en la carpeta del repositorio `godeporte-academico`, donde está `package.json`. Con Wrangler autenticado en la cuenta académica, pega el bloque completo. Cuando aparezcan los dos avisos, introduce el usuario y la contraseña por separado. La contraseña se ingresa de forma oculta.
+   | Type | Variable name | Value |
+   | --- | --- | --- |
+   | **Text** | `KAFKA_USER` | Nombre del usuario de Aiven, por ejemplo `avnadmin`. |
+   | **Secret** | `KAFKA_PASSWORD` | Contraseña original de ese usuario. Pega únicamente la contraseña. |
 
-   ```bash
-   (
-     set -euo pipefail
-     read -r -p 'Usuario Kafka REST: ' kafka_user
-     read -r -s -p 'Contraseña Kafka REST: ' kafka_password
-     printf '\n'
-     if [[ -z "$kafka_user" || -z "$kafka_password" ]]; then
-       printf 'Completa el usuario y la contraseña.\n' >&2
-       exit 1
-     fi
-     for service in pagos reservas; do
-       worker="godeporte-academico-$service"
-       printf 'Guardando KAFKA_AUTH en %s…\n' "$worker"
-       { printf 'Basic '; printf '%s:%s' "$kafka_user" "$kafka_password" | base64 | tr -d '\n'; } |
-         pnpm exec wrangler secret put KAFKA_AUTH --name "$worker"
-     done
-   )
-   ```
-
-   3. **En Cloudflare**, abre **Workers & Pages → godeporte-academico-pagos → Settings → Variables and Secrets** y confirma que aparece `KAFKA_AUTH` de tipo **Secret**. Repite en **godeporte-academico-reservas**. Wrangler envía y despliega el secreto directamente en cada Worker. El valor queda oculto en el panel. [Comando de Wrangler](https://developers.cloudflare.com/workers/wrangler/commands/workers/#secret-put).
+   Los Workers forman el encabezado HTTP Basic. Si ya configuraste `KAFKA_AUTH`, sigue siendo válido cuando falte alguno de los dos campos nuevos.
 
 ### Alternativa CLI para crear el servicio, activar REST y crear el tema
 

@@ -1,9 +1,10 @@
-import { body, fail, integer, internal, service, str, type Env, type Payment } from '../shared'
+import { body, fail, integer, internal, kafkaAuthorization, service, str, type Env, type Payment } from '../shared'
 const app = service('pagos')
 type PagoRow = Omit<Payment, 'aprobado'> & { aprobado: number; publicado: number }
 async function publish(env: Env, row: PagoRow) {
   const headers: Record<string, string> = { 'Content-Type': 'application/vnd.kafka.json.v2+json' }
-  if (env.KAFKA_AUTH) headers.Authorization = env.KAFKA_AUTH
+  const authorization = kafkaAuthorization(env)
+  if (authorization) headers.Authorization = authorization
   const response = await fetch(`${env.KAFKA_URL}/topics/${encodeURIComponent(env.KAFKA_TOPIC)}`, {
     method: 'POST', headers, signal: AbortSignal.timeout(5000),
     body: JSON.stringify({ records: [{ key: row.reserva, value: {

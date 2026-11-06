@@ -3,14 +3,13 @@ import type { Env, Payment } from '../shared'
 type KafkaRecord = { topic: string; partition: number; offset: number; value: Payment }
 const mediaType = 'application/vnd.kafka.v2+json'
 
-export async function consume(env: Env, apply: (payment: Payment) => Promise<void>) {
+export async function consume(env: Env, authorization: string, apply: (payment: Payment) => Promise<void>) {
   const root = env.KAFKA_URL.replace(/\/$/, '')
   const group = 'godeporte-academico-reservas'
   const name = crypto.randomUUID()
   const instance = `${root}/consumers/${group}/instances/${name}`
   async function call(url: string, method: string, payload?: unknown, accept = mediaType) {
-    const headers = new Headers({ Accept: accept, 'Content-Type': mediaType })
-    if (env.KAFKA_AUTH) headers.set('Authorization', env.KAFKA_AUTH)
+    const headers = { Accept: accept, 'Content-Type': mediaType, Authorization: authorization }
     const response = await fetch(url, { method, headers, body: payload === undefined ? undefined : JSON.stringify(payload),
       signal: AbortSignal.timeout(12000) })
     if (!response.ok) throw new Error(`Kafka REST ${method}: ${response.status}`)

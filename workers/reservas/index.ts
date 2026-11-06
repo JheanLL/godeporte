@@ -1,5 +1,5 @@
 import { consume } from './kafka'
-import { body, fail, integer, internal, service, str, user, type Env, type Notice, type Payment } from '../shared'
+import { body, fail, integer, internal, kafkaAuthorization, service, str, user, type Env, type Notice, type Payment } from '../shared'
 
 type Slot = { cancha: string; fecha: string; hora: number }
 type Booking = Slot & { id: string; usuario: string; estado: string; vence: number; centimos: number; ingreso: number | null }
@@ -168,6 +168,7 @@ export default {
   async scheduled(_event: ScheduledController, env: Env) {
     await expire(env)
     await dispatch(env)
-    if (env.KAFKA_AUTH) await consume(env, async event => { await applyPayment(env, event) })
+    const authorization = kafkaAuthorization(env)
+    if (authorization) await consume(env, authorization, async event => { await applyPayment(env, event) })
   },
 }
