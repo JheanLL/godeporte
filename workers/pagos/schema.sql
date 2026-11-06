@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS pagos (
+  id TEXT PRIMARY KEY, reserva TEXT NOT NULL UNIQUE, centimos INTEGER NOT NULL,
+  aprobado INTEGER NOT NULL CHECK (aprobado IN (0,1)),
+  publicado INTEGER NOT NULL DEFAULT 0 CHECK (publicado IN (0,1))
+);

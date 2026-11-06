@@ -1,44 +1,19 @@
 services:
-  ms-pagos:
-    build:
-      context: .
-      dockerfile: ms-pagos/Dockerfile
-    ports: ["8003:8003"]
-    networks: [godeporte-network]
-
-  # Servicios independientes; SQLite local por servicio.
-  ms-reservas:
-    build:
-      context: .
-      dockerfile: ms-reservas/Dockerfile
-    ports: ["8001:8001"]
+  kafka:
+    image: apache/kafka:4.1.1
+    ports: ["127.0.0.1:9092:9092"]
     environment:
-      MS_PAGOS_URL: http://ms-pagos:8003
-      MS_CANCHAS_URL: http://ms-canchas:8002
-      MS_NOTIFICACIONES_URL: http://ms-notificaciones:8005
-    networks: [godeporte-network]
-
-  ms-canchas:
-    build:
-      context: .
-      dockerfile: ms-canchas/Dockerfile
-    ports: ["8002:8002"]
-    networks: [godeporte-network]
-
-  ms-auth:
-    build:
-      context: .
-      dockerfile: ms-auth/Dockerfile
-    ports: ["8004:8004"]
-    networks: [godeporte-network]
-
-  ms-notificaciones:
-    build:
-      context: .
-      dockerfile: ms-notificaciones/Dockerfile
-    ports: ["8005:8005"]
-    networks: [godeporte-network]
-
-networks:
-  godeporte-network:
-    driver: bridge
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://127.0.0.1:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+  redis:
+    image: redis:8.2-alpine
+    ports: ["127.0.0.1:6379:6379"]

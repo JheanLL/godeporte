@@ -1,0 +1,140 @@
+<header>
+  <div class="bar">
+    <button class="brand" (click)="open('canchas')" i18n>GoDeporte <small>Académico</small></button>
+    <nav aria-label="Navegación principal" i18n-aria-label>
+      <button (click)="open('canchas')" i18n>Canchas</button>
+      @if (session(); as account) {
+        <button (click)="open('reservas')">{{ account.role === 'admin' ? copy.dashboard : copy.bookings }}</button>
+        @if (account.role === 'admin') {
+          <button (click)="open('admin')" i18n>Administrar</button>
+        }
+        <button (click)="logout()" i18n>Salir</button>
+      } @else {
+        <button (click)="open('login')" i18n>Iniciar sesión</button>
+      }
+    </nav>
+  </div>
+</header>
+<main>
+  @if (status()) { <p class="status" role="status">{{ status() }}</p> }
+  @switch (tab()) {
+    @case ('canchas') {
+      <section class="intro">
+        <p class="eyebrow" i18n>TALLER DE DESARROLLO · PUCALLPA</p>
+        <h1 i18n>Encuentra tu próxima cancha</h1>
+        <p i18n>Elige una cancha, consulta sus horarios y prueba el flujo de reserva con un pago simulado.</p>
+      </section>
+      <section class="grid" aria-label="Catálogo" i18n-aria-label>
+        @for (court of courts(); track court.id) {
+          <article>
+            <p class="eyebrow">{{ court.ubicacion }}</p>
+            <h2>{{ court.nombre }}</h2>
+            <p>{{ court.caracteristicas }}</p>
+            <p><strong>{{ price(court.centimos) }}</strong> por hora</p>
+            <button class="primary" [disabled]="busy()" (click)="choose(court)" i18n>Ver horarios</button>
+          </article>
+        }
+      </section>
+      @if (selected(); as court) {
+        <section class="panel">
+          <h2 i18n>Horarios · {{ court.nombre }}</h2>
+          <label i18n>Fecha <input type="date" [min]="today" [value]="date()" #day (change)="day.value && choose(court, day.value)"></label>
+          <div class="slots">
+            @for (slot of slots(); track slot.hora) {
+              <button [disabled]="busy() || !slot.libre" (click)="reserve(slot.hora)">{{ time(slot.hora) }}</button>
+            }
+          </div>
+        </section>
+      }
+    }
+    @case ('login') {
+      <section class="panel form">
+        <h1 i18n>Iniciar sesión</h1>
+        <form (submit)="account($event, false)">
+          <label i18n>Correo <input type="email" name="email" autocomplete="username" required></label>
+          <label i18n>Contraseña <input type="password" name="password" autocomplete="current-password" minlength="10" required></label>
+          <button class="primary" [disabled]="busy()" i18n>Entrar</button>
+        </form>
+        <button (click)="open('registro')" i18n>Crear cuenta</button>
+      </section>
+    }
+    @case ('registro') {
+      <section class="panel form">
+        <h1 i18n>Crear cuenta</h1>
+        <form (submit)="account($event, true)">
+          <label i18n>Nombre <input name="nombre" autocomplete="name" required></label>
+          <label i18n>Correo <input type="email" name="email" autocomplete="username" required></label>
+          <label i18n>Contraseña <input type="password" name="password" autocomplete="new-password" minlength="10" required></label>
+          <button class="primary" [disabled]="busy()" i18n>Registrarme</button>
+        </form>
+      </section>
+    }
+    @case ('reservas') {
+      <h1>{{ session()?.role === 'admin' ? copy.dashboardTitle : copy.bookings }}</h1>
+      @if (session()?.role === 'admin') {
+        <p i18n>{{ count('CONFIRMADA') }} confirmadas · {{ count('PENDIENTE') }} pendientes · {{ count('CANCELADA') }} canceladas</p>
+      }
+      <button (click)="open('reservas')" [disabled]="busy()" i18n>Actualizar historial</button>
+      <section class="grid">
+        @for (item of bookings(); track item.id) {
+          <article>
+            <p class="eyebrow">{{ item.estado }}</p>
+            <h2>{{ courtName(item.cancha) }}</h2>
+            <p>{{ item.fecha }} · {{ time(item.hora) }} · {{ price(item.centimos) }}</p>
+            <div class="actions">
+              @if (item.estado === 'PENDIENTE' && session()?.role === 'cliente') {
+                <p i18n>Vence a las {{ deadline(item.vence) }}</p>
+                <button class="primary" (click)="pay(item, true)" [disabled]="busy()" i18n>Simular aprobación</button>
+                <button (click)="pay(item, false)" [disabled]="busy()" i18n>Simular rechazo</button>
+              }
+              @if (item.estado === 'CONFIRMADA') {
+                <button (click)="showReceipt(item)" [disabled]="busy()" i18n>Ver QR</button>
+              }
+              @if (item.estado === 'PENDIENTE' || item.estado === 'CONFIRMADA') {
+                <button (click)="cancel(item)" [disabled]="busy()" i18n>Cancelar reserva</button>
+              }
+            </div>
+          </article>
+        } @empty {
+          <p i18n>Todavía no hay reservas.</p>
+        }
+      </section>
+      @if (receipt(); as proof) {
+        <section class="panel">
+          <h2 i18n>QR de acceso</h2>
+          <img [src]="proof.qr" alt="Código QR de acceso" i18n-alt>
+          <p><code>{{ proof.codigo }}</code></p>
+          @if (proof.usado) { <p i18n>Ingreso registrado.</p> }
+        </section>
+      }
+    }
+    @case ('admin') {
+      <h1 i18n>Administrar canchas</h1>
+      <div class="actions">
+        @for (court of courts(); track court.id) {
+          <button (click)="editing.set(court)">{{ court.nombre }}</button>
+        }
+        <button (click)="editing.set(null)" i18n>Nueva cancha</button>
+      </div>
+      <section class="panel form">
+        <h2>{{ editing() ? copy.edit : copy.newCourt }}</h2>
+        <form (submit)="saveCourt($event)">
+          <label i18n>Nombre <input name="nombre" [value]="editing()?.nombre ?? ''" required></label>
+          <label i18n>Ubicación <input name="ubicacion" [value]="editing()?.ubicacion ?? ''" required></label>
+          <label i18n>Características <input name="caracteristicas" [value]="editing()?.caracteristicas ?? ''" required></label>
+          <label i18n>Tarifa por hora en soles <input name="tarifa" type="number" min="0.01" step="0.01" [value]="(editing()?.centimos ?? 0) / 100" required></label>
+          <label i18n>Hora de apertura <input name="abre" type="number" min="0" max="23" [value]="editing()?.abre ?? 8" required></label>
+          <label i18n>Hora de cierre <input name="cierra" type="number" min="1" max="24" [value]="editing()?.cierra ?? 22" required></label>
+          <button class="primary" [disabled]="busy()" i18n>Guardar cancha</button>
+        </form>
+      </section>
+      <section class="panel form">
+        <h2 i18n>Validar ingreso</h2>
+        <form (submit)="$event.preventDefault(); validate(code.value)">
+          <label i18n>Código del QR <input #code required></label>
+          <button class="primary" [disabled]="busy()" i18n>Validar código</button>
+        </form>
+      </section>
+    }
+  }
+</main>

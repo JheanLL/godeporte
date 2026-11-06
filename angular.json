@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "projects": {
+    "godeporte": {
+      "projectType": "application",
+      "i18n": {"sourceLocale": "es-PE"},
+      "root": "web",
+      "sourceRoot": "web",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "browser": "web/main.ts", "index": "web/index.html", "tsConfig": "web/tsconfig.json",
+            "outputPath": "dist/godeporte", "assets": [{"glob": "config.json", "input": "web", "output": "/"}],
+            "styles": ["web/style.css"], "optimization": true
+          }
+        },
+        "serve": {"builder": "@angular/build:dev-server", "options": {"buildTarget": "godeporte:build"}}
+      }
+    }
+  }
+}

@@ -1,0 +1,239 @@
+openapi: 3.1.0
+info:
+  title: GoDeporte Académico
+  version: 1.0.0
+  description: API pública del Gateway. Las operaciones de pago solo simulan resultados.
+servers:
+  - url: http://localhost:8787/api
+paths:
+  /{servicio}/health:
+    get:
+      summary: Consultar estado del servicio
+      parameters:
+        - name: servicio
+          in: path
+          required: true
+          schema: {type: string, enum: [auth, canchas, reservas, pagos, notificaciones]}
+      responses:
+        '200': {description: Servicio disponible}
+  /auth/registro:
+    post:
+      summary: Registrar cliente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/Credenciales'
+                - type: object
+                  required: [nombre]
+                  properties:
+                    nombre: {type: string, maxLength: 100}
+      responses:
+        '201': {description: Cliente registrado}
+        '409': {description: Correo existente}
+  /auth/login:
+    post:
+      summary: Emitir JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Credenciales'}
+      responses:
+        '200':
+          description: Sesión iniciada
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, nombre, role]
+                properties:
+                  token: {type: string}
+                  nombre: {type: string}
+                  role: {type: string, enum: [cliente, admin]}
+        '401': {description: Credenciales inválidas}
+  /canchas/:
+    get:
+      summary: Consultar catálogo
+      responses:
+        '200':
+          description: Catálogo
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/Cancha'}
+  /canchas/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      summary: Consultar cancha
+      responses:
+        '200':
+          description: Cancha encontrada
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Cancha'}
+        '404': {description: Cancha inexistente}
+    put:
+      summary: Guardar cancha como administrador
+      security: [{bearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Cancha'}
+      responses:
+        '200': {description: Cancha guardada}
+        '403': {description: Rol insuficiente}
+  /reservas/disponibilidad:
+    get:
+      summary: Listar franjas de una hora para una cancha
+      parameters:
+        - {name: cancha, in: query, required: true, schema: {type: string}}
+        - {name: fecha, in: query, required: true, schema: {type: string, format: date}}
+      responses:
+        '200':
+          description: Horarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [hora, libre]
+                  properties:
+                    hora: {type: integer, minimum: 0, maximum: 23}
+                    libre: {type: boolean}
+  /reservas/:
+    get:
+      summary: Consultar reservas propias o dashboard administrativo
+      security: [{bearer: []}]
+      responses:
+        '200':
+          description: Reservas
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/Reserva'}
+    post:
+      summary: Crear reserva pendiente
+      security: [{bearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Horario'}
+      responses:
+        '201':
+          description: Reserva pendiente
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Reserva'}
+        '409': {description: Horario ocupado}
+  /reservas/{id}/pagar:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      summary: Simular pago de una reserva propia
+      security: [{bearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [aprobado]
+              properties:
+                aprobado: {type: boolean}
+      responses:
+        '202': {description: Pago recibido para procesamiento asíncrono}
+        '409': {description: Reserva cerrada o vencida}
+  /reservas/{id}/cancelar:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      summary: Cancelar reserva propia o administrar una reserva
+      security: [{bearer: []}]
+      responses:
+        '200': {description: Reserva cancelada}
+        '409': {description: Reserva cerrada o ingreso ya registrado}
+  /notificaciones/comprobante/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      summary: Consultar comprobante de reserva confirmada
+      security: [{bearer: []}]
+      responses:
+        '200':
+          description: Comprobante con QR
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [codigo, qr, usado]
+                properties:
+                  codigo: {type: string, format: uuid}
+                  qr: {type: string, description: URL de datos SVG}
+                  usado: {type: boolean}
+        '404': {description: Comprobante aún no disponible o inaccesible}
+        '409': {description: Reserva cancelada}
+  /notificaciones/validar/{codigo}:
+    post:
+      summary: Registrar ingreso como administrador
+      security: [{bearer: []}]
+      parameters:
+        - {name: codigo, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200': {description: Ingreso registrado}
+        '403': {description: Rol insuficiente}
+        '404': {description: Código desconocido}
+        '409': {description: Código utilizado o reserva cancelada}
+components:
+  securitySchemes:
+    bearer: {type: http, scheme: bearer, bearerFormat: JWT}
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: {type: string}
+  schemas:
+    Credenciales:
+      type: object
+      required: [email, password]
+      properties:
+        email: {type: string, format: email, maxLength: 254}
+        password: {type: string, minLength: 10, maxLength: 128}
+    Cancha:
+      type: object
+      required: [nombre, ubicacion, caracteristicas, centimos, abre, cierra]
+      properties:
+        id: {type: string, readOnly: true}
+        nombre: {type: string}
+        ubicacion: {type: string}
+        caracteristicas: {type: string}
+        centimos: {type: integer, minimum: 1}
+        abre: {type: integer, minimum: 0, maximum: 23}
+        cierra: {type: integer, minimum: 1, maximum: 24}
+    Horario:
+      type: object
+      required: [cancha, fecha, hora]
+      properties:
+        cancha: {type: string}
+        fecha: {type: string, format: date}
+        hora: {type: integer, minimum: 0, maximum: 23}
+    Reserva:
+      allOf:
+        - $ref: '#/components/schemas/Horario'
+        - type: object
+          required: [id, usuario, centimos, estado, vence]
+          properties:
+            id: {type: string, format: uuid}
+            usuario: {type: string, format: uuid}
+            centimos: {type: integer}
+            estado: {type: string, enum: [PENDIENTE, CONFIRMADA, CANCELADA, EXPIRADA]}
+            vence: {type: integer, description: Segundos Unix}

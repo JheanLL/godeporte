@@ -1,0 +1,3 @@
+CREATE TABLE IF NOT EXISTS comprobantes (
+  reserva TEXT PRIMARY KEY, usuario TEXT NOT NULL, codigo TEXT UNIQUE NOT NULL
+);

@@ -10,3 +10,10 @@ __pycache__/
 # Material interno se distribuye fuera del proyecto.
 /desarrollo/
 /godeporte-desarrollo/
+
+node_modules/
+dist/
+.angular/
+.wrangler/
+.local/
+.dev.vars*

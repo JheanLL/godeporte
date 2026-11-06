@@ -1,54 +1,40 @@
-# GoDeporte
+# GoDeporte Académico
 
-Sistema de gestión y reserva de espacios deportivos. Proyecto de Taller de Desarrollo, Ingeniería de Sistemas, Universidad Nacional de Ucayali.
+Sistema de reservas deportivas para Taller de Desarrollo de la Universidad Nacional de Ucayali. La demostración usa pagos simulados. El flujo de Yape directo y Culqi pertenece a una futura edición comercial independiente.
 
-## Integrantes
+## Demostración local
 
-- Jean Patrick Nieto Rodríguez: autenticación y notificaciones.
-- Jheferson Abel Portocarrero Tuesta: canchas y reservas.
-- Jhean Carlos Tecse Lozano: pagos.
-
-## Ejecución
-
-Requiere Docker y Docker Compose instalados, con el motor de Docker activo. Desde la carpeta del proyecto:
+Se necesita Node.js 24, pnpm 12 y Docker con Compose. Kafka y Redis son procesos reales. Wrangler ejecuta los cinco Workers, el Gateway, cinco D1 locales y la cola de avisos.
 
 ```bash
-docker compose up --build -d
-docker compose ps
+pnpm install --frozen-lockfile
+docker compose up -d
+pnpm setup:local
 ```
 
-Para ejecutar únicamente pagos:
+Abre tres terminales desde la raíz y ejecuta un comando en cada una.
 
 ```bash
-docker compose up --build -d ms-pagos
+pnpm dev:api
+pnpm dev:infra
+pnpm dev
 ```
 
-## Servicios
+Abre [GoDeporte en localhost](http://localhost:3000), crea una cuenta, elige una cancha y simula un pago. Actualiza el historial hasta ver la reserva confirmada y abre el QR. El administrador local usa el correo `admin@example.test` y la contraseña ficticia `demostracion-local-2026`. En **Administrar** se puede validar el texto del QR.
 
-| Servicio | Función | Documentación interactiva |
-| --- | --- | --- |
-| ms-reservas | Creación, consulta y estado de reservas | http://localhost:8001/docs |
-| ms-canchas | Registro y catálogo de canchas | http://localhost:8002/docs |
-| ms-pagos | Simulación y registro de pagos | http://localhost:8003/docs |
-| ms-auth | Registro e inicio de sesión | http://localhost:8004/docs |
-| ms-notificaciones | Registro de avisos simulados | http://localhost:8005/docs |
-
-Cada servicio usa FastAPI y una base SQLite independiente. Los pagos y avisos son simulados; no hay cobros ni envíos reales.
-
-## Prueba del flujo
-
-1. En Swagger de canchas, crear una cancha con nombre y tarifa.
-2. En Swagger de reservas, crear una reserva con el identificador de esa cancha, fecha, horario y monto.
-3. Ejecutar `/reservas/{id}/pagar` con `metodo_pago: "Yape"` y `simulacion_resultado: "forzar_aprobado"`. La reserva pasa a CONFIRMADA.
-4. Crear otra reserva en un horario diferente y usar `forzar_rechazado`. La reserva pasa a CANCELADA.
-5. Consultar los resultados en los endpoints de reservas y pagos.
-
-En Swagger se abre el endpoint, se pulsa **Try it out**, se completan los datos y se pulsa **Execute**.
-
-## Detener
+## Verificación
 
 ```bash
-docker compose stop
+pnpm check
+pnpm build
+# Ejecutar con Kafka y Redis arriba y los puertos 8787/8788 libres.
+bash scripts/test-local.sh
 ```
 
-Los datos permanecen al reiniciar el mismo contenedor; recrearlo puede borrarlos al no utilizar volúmenes persistentes.
+La prueba recorre los cinco servicios y verifica concurrencia, exclusión del horario, TTL real de Redis, expiración, aprobaciones y rechazos a través de Kafka, reintento de publicación, entrega repetida, autorización y QR de un solo uso.
+
+- [Arquitectura, responsabilidades y secuencia](docs/arquitectura.md)
+- [Despliegue en Cloudflare, Aiven y Upstash](docs/despliegue.md)
+- [Contrato OpenAPI](docs/openapi.yaml)
+
+La base histórica FastAPI del equipo está disponible en el commit `698c2c0`. La entrega actual conserva los dominios y el flujo de la propuesta y cambia la infraestructura a la del plan académico actualizado.

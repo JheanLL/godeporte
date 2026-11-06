@@ -1,0 +1,15 @@
+export const messages = {
+  config: 'No se pudo cargar la configuración.',
+  request: 'No se pudo completar la solicitud.',
+  unexpected: 'Ocurrió un error.',
+  loginRequired: 'Inicia sesión para reservar.',
+  reserved: 'Horario reservado por 10 minutos.',
+  processing: 'Pago en proceso. Actualiza el historial en unos segundos.',
+  checkIn: 'Ingreso registrado.',
+  saved: 'Cancha guardada.',
+  dashboard: 'Dashboard',
+  dashboardTitle: 'Dashboard de reservas',
+  bookings: 'Mis reservas',
+  edit: 'Editar cancha',
+  newCourt: 'Nueva cancha',
+} as const

@@ -1,0 +1,36 @@
+{
+  "name": "godeporte-academico",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:api": "node scripts/config.mjs && wrangler dev -c .local/gateway.json -c .local/auth.json -c .local/canchas.json -c .local/reservas.json -c .local/pagos.json -c .local/notificaciones.json --port 8787",
+    "dev": "ng serve --port 3000",
+    "build": "ng build",
+    "check": "tsc --noEmit",
+    "test": "node --test tests/*.test.mjs",
+    "dev:infra": "node scripts/infra.mjs",
+    "setup:local": "bash scripts/setup-local.sh"
+  },
+  "dependencies": {
+    "@angular/common": "^21.0.0",
+    "@angular/compiler": "^21.0.0",
+    "@angular/core": "^21.0.0",
+    "@angular/platform-browser": "^21.0.0",
+    "hono": "^4.12.0",
+    "jose": "^6.1.0",
+    "kafkajs": "^2.2.4",
+    "qrcode": "^1.5.4",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@angular/build": "^21.0.0",
+    "@angular/cli": "^21.0.0",
+    "@angular/compiler-cli": "^21.0.0",
+    "@cloudflare/workers-types": "^4.20260401.0",
+    "@types/qrcode": "^1.5.6",
+    "redis": "^6.3.1",
+    "typescript": "~5.9.3",
+    "wrangler": "^4.80.0"
+  },
+  "packageManager": "pnpm@12.17.0"
+}
