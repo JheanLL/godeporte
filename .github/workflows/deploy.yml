@@ -1,4 +1,4 @@
-name: Desplegar GoDeporte Académico
+name: Desplegar GoDeporte
 on:
   workflow_dispatch:
 permissions:

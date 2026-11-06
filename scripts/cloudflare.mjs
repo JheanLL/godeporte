@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs'
 
 const project = 'godeporte-academico'
-const repo = 'JheanLL/' + project
+const repo = 'JheanLL/godeporte'
 const services = ['auth', 'canchas', 'pagos', 'reservas', 'notificaciones']
 const deploymentFile = '.local/cloudflare.json'
 const [action, account, subdomain] = process.argv.slice(2)

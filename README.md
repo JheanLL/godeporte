@@ -1,4 +1,4 @@
-# GoDeporte Académico
+# GoDeporte
 
 Sistema de reservas deportivas para Taller de Desarrollo de la Universidad Nacional de Ucayali. La demostración usa pagos simulados. El flujo de Yape directo y Culqi pertenece a una futura edición comercial independiente.
 

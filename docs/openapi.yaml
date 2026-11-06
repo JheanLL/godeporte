@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: GoDeporte Académico
+  title: GoDeporte
   version: 1.0.0
   description: API pública del Gateway. Las operaciones de pago solo simulan resultados.
 servers:

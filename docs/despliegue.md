@@ -1,16 +1,16 @@
-# Despliegue de GoDeporte Académico
+# Despliegue de GoDeporte
 
 Si estás completando la [web que ya está publicada](https://godeporte-academico.pages.dev), empieza en [Aiven](#3-aiven--kafka) y [Upstash](#4-upstash--redis). Los pasos 1 y 2 sirven para crear otro despliegue.
 
 ## 1. Autorizar Cloudflare y crear recursos
 
-1. Clona el [repositorio académico](https://github.com/JheanLL/godeporte-academico) y abre una terminal en su raíz. Usa Node.js 24 y pnpm 12.
+1. Clona el [repositorio académico](https://github.com/JheanLL/godeporte) y abre una terminal en su raíz. Usa Node.js 24 y pnpm 12.
 2. Ejecuta el login. Wrangler abre Cloudflare en el navegador. Selecciona la cuenta que administrará el proyecto y autoriza el acceso.
 3. Busca el ID de esa cuenta en la salida de `whoami`. En el panel de Cloudflare entra a **Workers & Pages**. Si la cuenta todavía pide registrar un subdominio `workers.dev`, elige uno. El subdominio es el texto anterior a `.workers.dev`.
 
 ```bash
-git clone https://github.com/JheanLL/godeporte-academico.git
-cd godeporte-academico
+git clone https://github.com/JheanLL/godeporte.git
+cd godeporte
 pnpm install --frozen-lockfile
 pnpm exec wrangler login --use-keyring
 pnpm exec wrangler whoami
@@ -113,7 +113,7 @@ node scripts/cloudflare.mjs github
 
 1. En **Cloudflare → My Profile → API Tokens → Create Token → Create Custom Token**, limita el token a la cuenta académica. Concede **D1: Edit**, **Queues: Edit**, **Workers Scripts: Edit** y **Cloudflare Pages: Edit**. Añade **Account Settings: Read** si tu política requiere ese permiso para consultar la cuenta. [Permisos de Cloudflare](https://developers.cloudflare.com/workers/authorization/).
 2. En **GitHub → Settings → Environments → academico → Environment secrets**, crea `CLOUDFLARE_API_TOKEN` directamente en el formulario.
-3. Desde la raíz del repositorio ejecuta `gh workflow run deploy.yml --ref main`. Sigue la ejecución en **Actions → Desplegar GoDeporte Académico**.
+3. Desde la raíz del repositorio ejecuta `gh workflow run deploy.yml --ref main`. Sigue la ejecución en **Actions → Desplegar GoDeporte**.
 
 ## 6. Cuentas de administrador y validación del QR
 
