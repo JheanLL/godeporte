@@ -2,6 +2,8 @@
 
 El aprovisionamiento crea cinco bases D1, dos colas y un proyecto Pages. El despliegue aplica los esquemas, compila Angular, publica seis Workers por separado y sube la web a Pages. Kafka y Redis usan servicios propios en Aiven y Upstash.
 
+Si estás completando la [web que ya está publicada](https://godeporte-academico.pages.dev), empieza en [Aiven](#3-aiven--kafka) y [Upstash](#4-upstash--redis). Los pasos 1 y 2 sirven para crear otro despliegue.
+
 ## 1. Autorizar Cloudflare y crear recursos
 
 1. Clona el [repositorio académico](https://github.com/JheanLL/godeporte-academico) y abre una terminal en su raíz. Usa Node.js 24 y pnpm 12.
@@ -30,14 +32,59 @@ El primer comando despliega con la sesión de Cloudflare y verifica `/health` de
 
 Antes de continuar, revisa las URLs de Pages y del Gateway en `.local/cloudflare.json`. La web ya puede cargar el catálogo. Kafka habilita la confirmación del pago. Redis habilita el bloqueo temporal auxiliar y D1 mantiene la exclusividad del horario.
 
-## 3. Configurar Kafka en Aiven
+## 3. Aiven · Kafka
 
-1. Entra en [Aiven Console](https://console.aiven.io/) y selecciona o crea un proyecto. En **Services → Create service**, elige **Apache Kafka → Free**. Ponle `godeporte-academico` y espera a que indique **Running**. Reutiliza el servicio del curso si ya existe.
-2. En el servicio, abre **Manage stream → Topics → Create topic**. Crea `godeporte-pagos` con los valores predeterminados del plan. Si ya tienes `avn` autenticado, puedes usar `avn service topic-create SERVICIO godeporte-pagos --project PROYECTO --partitions 2 --replication 1`.
-3. Ve a **Overview → Connection information → Apache Kafka REST**. Activa **Enable REST Proxy** si está desactivado. Si usas ACL de Kafka, el usuario de servicio necesita publicar y leer el tema, y leer el grupo `godeporte-academico-reservas`.
-4. En Cloudflare, abre **Workers & Pages**. En los Workers **godeporte-academico-pagos** y **godeporte-academico-reservas**, ve a **Settings → Variables and Secrets → Add**. Agrega `KAFKA_URL` como texto y `KAFKA_AUTH` como **Secret**, con el mismo valor en ambos. Usa el origen HTTPS del REST Proxy para `KAFKA_URL`, sin ruta ni barra al final. `KAFKA_AUTH` es el valor completo de `Authorization` para Basic Auth, con prefijo `Basic ` seguido de la codificación Base64 de `usuario:contraseña`. No uses la URL TCP del broker ni la URL del Schema Registry.
+### 3.1 Crear o reutilizar el servicio
 
-Si prefieres cargar el encabezado con CLI desde Bash, ejecuta lo siguiente en tu terminal. El ingreso es oculto y el encabezado se entrega por stdin. Cambia de cuenta de Wrangler si tienes más de una, o selecciona la cuenta académica mediante `CLOUDFLARE_ACCOUNT_ID`.
+1. Abre [Aiven Console](https://console.aiven.io/) e inicia sesión. En la parte superior elige el **proyecto** donde quedará el servicio. Anota el nombre técnico del proyecto si vas a usar CLI.
+2. En **Services** busca el Kafka del curso. Si ya existe, ábrelo y pasa al paso 3.2. Para crearlo, elige **Create service → Apache Kafka → Free**. En **Service name** escribe `godeporte-academico`, elige el grupo de región que te ofrezca el plan gratuito y pulsa **Create service**. Espera el estado **Running**. [Creación del servicio gratuito](https://aiven.io/docs/products/kafka/free-tier/create-free-tier-kafka-service).
+
+### 3.2 Crear el tema `godeporte-pagos`
+
+Entra al **servicio Kafka**, luego a **Manage stream → Topics → Create topic**. Completa los campos así:
+
+| Campo | Valor |
+| --- | --- |
+| **Topic** o **Topic name** | `godeporte-pagos` |
+| **Topic type**, si aparece | **Classic** |
+| **Partitions**, si aparece | `2` |
+| **Replication factor**, si aparece | `1` |
+| **Min in-sync replicas**, si aparece | `1` |
+| **Cleanup policy**, si aparece | `delete` |
+| **Retention** y opciones de almacenamiento | Conserva lo que fija el plan **Free**. No habilites almacenamiento por niveles. |
+
+Si solo aparece el nombre, escríbelo y pulsa **Create topic**. Los campos ocultos los administra Aiven. Al terminar, comprueba que `godeporte-pagos` aparece en **Topics**. El nombre se escribe como texto, en minúsculas y con guion. El formulario no requiere un esquema, un archivo JSON ni un mensaje de prueba. [Creación de temas](https://aiven.io/docs/products/kafka/howto/create-topic).
+
+GoDeporte publica después un mensaje **JSON**, con el ID de reserva como clave de Kafka. El valor tiene esta forma ficticia:
+
+```json
+{
+  "id": "11111111-1111-4111-8111-111111111111",
+  "reserva": "22222222-2222-4222-8222-222222222222",
+  "aprobado": true
+}
+```
+
+`aprobado` es un booleano. En la demostración, el Worker de Pagos genera el evento y el de Reservas lo consume.
+
+### 3.3 Activar Kafka REST y localizar la conexión
+
+1. Dentro del servicio Kafka abre **Overview → Connection information → Apache Kafka REST**. Si aparece **Enable REST Proxy**, actívalo y espera a que la pestaña muestre los datos de conexión.
+2. En **Overview → Set up your stream → Quick connect**, selecciona **Kafka REST** y el tema `godeporte-pagos`. En el paso de autenticación selecciona un **service user**. Si el servicio usa ACL, comprueba que ese usuario pueda producir y consumir en el tema y usar el grupo `godeporte-academico-reservas`.
+3. Identifica el origen HTTPS de Kafka REST, incluido el puerto si figura. Si lo encuentras en un comando generado, toma solo `https://HOST:PUERTO`, antes de `/topics/...`. El host/puerto TCP del broker y el endpoint de Schema Registry son conexiones distintas. [Quick connect de Kafka REST](https://aiven.io/docs/products/kafka/howto/connect-with-kafka-rest).
+
+### 3.4 Guardar la conexión en los dos Workers
+
+Abre el [panel de Cloudflare](https://dash.cloudflare.com/) en la cuenta académica. Busca **Workers & Pages**, abre **godeporte-academico-pagos → Settings → Variables and Secrets → Add** y completa:
+
+| Type | Variable name | Value |
+| --- | --- | --- |
+| **Text** | `KAFKA_URL` | Origen de Kafka REST. Ejemplo ficticio `https://kafka-academico.example.test:24443`. |
+| **Secret** | `KAFKA_AUTH` | El encabezado Basic del usuario de servicio. Se obtiene con el comando de abajo. |
+
+Guarda primero `KAFKA_URL` con **Deploy** y repite en **godeporte-academico-reservas**. El bloque de terminal guarda `KAFKA_AUTH` en los dos Workers, así que puedes dejar esa fila para el CLI. El despliegue ya fija `KAFKA_TOPIC=godeporte-pagos`. [Variables y secretos de Workers](https://developers.cloudflare.com/workers/configuration/secrets/).
+
+Para guardar `KAFKA_AUTH` en ambos Workers sin mostrarlo, ejecuta este bloque en tu terminal Bash desde el repositorio, con Wrangler autenticado. Escribe el usuario y la contraseña del **service user** al recibir los prompts. El comando genera el prefijo `Basic ` y codifica `usuario:contraseña`. Si tienes varias cuentas de Cloudflare, selecciona la académica antes de ejecutarlo.
 
 ```bash
 (
@@ -52,15 +99,48 @@ Si prefieres cargar el encabezado con CLI desde Bash, ejecuta lo siguiente en tu
 )
 ```
 
-[Aiven Free Kafka](https://aiven.io/docs/products/kafka/free-tier/create-free-tier-kafka-service) · [Temas Kafka](https://aiven.io/docs/products/kafka/howto/create-topic) · [Karapace REST Proxy](https://aiven.io/docs/products/kafka/karapace/howto/enable-karapace).
+### Alternativa CLI para crear el servicio, activar REST y crear el tema
 
-## 4. Configurar Redis en Upstash
+Con [`avn` instalado y autenticado](https://aiven.io/docs/tools/cli) y un proyecto existente, puedes automatizar las operaciones de Aiven. Cambia `PROYECTO_AIVEN` por el nombre técnico de tu proyecto. Omite `service create` si ya tienes el servicio y `topic-create` si el tema ya existe.
 
-1. Entra en [Upstash Console](https://console.upstash.com/), abre **Redis → Create Database**, usa el nombre `godeporte-academico` y selecciona el plan **Free**. Si tu cuenta ya tiene una base gratuita dedicada al curso, puedes reutilizarla.
-2. Abre **Details → REST API**. En el Worker **godeporte-academico-reservas**, agrega `REDIS_URL` como texto con la URL HTTPS REST. Agrega `REDIS_TOKEN` como **Secret** con el token REST de lectura y escritura. Usa el token de la base, no la clave de administración de la cuenta.
-3. Una cuenta nativa de Upstash con CLI ya configurada puede aprovisionar desde terminal. La CLI 1.6 no permite fijar el plan en el comando de creación. Para garantizar la cuota gratuita, usa la consola o la API de administración autenticada con `"plan": "free"` en el cuerpo de la solicitud. La creación temporal sin cuenta expira y no sirve para una entrega permanente.
+```bash
+proyecto_aiven='PROYECTO_AIVEN'
+servicio_kafka='godeporte-academico'
 
-[Inicio de Redis en Upstash](https://upstash.com/docs/redis/overall/getstarted) · [Upstash CLI](https://upstash.com/docs/agent-resources/cli) · [API de creación](https://upstash.com/docs/devops/developer-api/redis/create_database_global).
+avn service create "$servicio_kafka" --project "$proyecto_aiven" \
+  --service-type kafka --plan free-0 -c kafka_version=4.0
+avn service wait "$servicio_kafka" --project "$proyecto_aiven"
+avn service update "$servicio_kafka" --project "$proyecto_aiven" -c kafka_rest=true
+avn service wait "$servicio_kafka" --project "$proyecto_aiven"
+avn service topic-create "$servicio_kafka" godeporte-pagos --project "$proyecto_aiven" \
+  --partitions 2 --replication 1
+avn service topic-get "$servicio_kafka" godeporte-pagos --project "$proyecto_aiven"
+```
+
+Si Aiven rechaza `free-0` por API para tu cuenta, crea el servicio **Free** desde la consola y retoma en `service wait`. La sesión de Aiven es independiente de Wrangler y GitHub. Aiven también ofrece [MCP con autorización por navegador](https://aiven.io/docs/tools/mcp-server) si tu organización ya tiene ese acceso habilitado. [Activación de Kafka REST por configuración](https://aiven.io/docs/products/kafka/concepts/kafka-rest-api).
+
+## 4. Upstash · Redis
+
+### 4.1 Abrir la base y encontrar los dos valores
+
+1. Abre [Upstash Console](https://console.upstash.com/) e inicia sesión. Entra a **Redis** y pulsa el nombre de tu base para abrir su ficha. Si todavía no existe, pulsa **Create Database**, escribe `godeporte-academico`, selecciona una región ofrecida y el plan **Free**, y pulsa **Create**.
+2. En la ficha de la base, busca la sección **Connect** y selecciona su pestaña **REST**. **REST** está dentro de **Connect**, no es una opción del menú lateral. Si no aparece esa pestaña, busca **Connect → JavaScript**. El ejemplo de conexión identifica los mismos dos valores. Otra presentación de la ficha muestra **Endpoint** y **Token**. En ella, toma el endpoint **HTTPS**.
+3. Localiza `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN`. Si ves **Read-Only Token**, deja el selector apagado para usar el token estándar, que permite escribir y liberar el bloqueo. Conserva solo el valor de cada campo, sin comillas ni el nombre a la izquierda del signo `=`. [Dónde encontrar la URL y el token REST](https://upstash.com/docs/redis/troubleshooting/http_unauthorized) · [Diferencia entre token estándar y de lectura](https://upstash.com/docs/redis/features/restapi).
+
+### 4.2 Cambiar al panel de Cloudflare y cargar los valores
+
+1. Abre otra pestaña con el [panel de Cloudflare](https://dash.cloudflare.com/). Entra en la cuenta académica y busca **Workers & Pages** desde el menú de la cuenta o el buscador del panel.
+2. En la lista, abre **godeporte-academico-reservas**. Es un **Worker de Cloudflare** separado del proyecto web Pages **godeporte-academico**. En el Worker, abre **Settings → Variables and Secrets → Add**.
+3. En el formulario elige el tipo y completa los campos de la primera fila. Pulsa **Add variable** para la segunda fila.
+
+| Type | Variable name en Cloudflare | Value que viene de Upstash |
+| --- | --- | --- |
+| **Text** | `REDIS_URL` | Valor de `UPSTASH_REDIS_REST_URL`, por ejemplo `https://redis-academico.example.test`. |
+| **Secret** | `REDIS_TOKEN` | Valor de `UPSTASH_REDIS_REST_TOKEN` estándar. Pega el valor solo, sin prefijo `Bearer`. |
+
+4. Pulsa **Deploy**. Al volver a **Variables and Secrets**, verifica que se vean los dos nombres. Cloudflare oculta el valor de `REDIS_TOKEN`. GoDeporte usa la URL HTTPS de la base y añade el encabezado de autorización al conectarse. [Formulario de secretos de Cloudflare](https://developers.cloudflare.com/workers/configuration/secrets/).
+
+Con una cuenta nativa de Upstash, su [API de administración](https://upstash.com/docs/devops/developer-api/redis/create_database_global) también permite crear la base con `"plan": "free"`. La CLI 1.6 no permite elegir el plan al crearla. Para la entrega usa una base permanente de tu cuenta.
 
 ## 5. Habilitar GitHub Actions para despliegues posteriores
 
