@@ -1,4 +1,4 @@
-import { Component, effect, provideZonelessChangeDetection, signal } from '@angular/core'
+import { Component, computed, effect, provideZonelessChangeDetection, signal } from '@angular/core'
 import { bootstrapApplication } from '@angular/platform-browser'
 import { messages } from './messages'
 
@@ -10,6 +10,28 @@ type Entry = Pick<Booking, 'cancha' | 'fecha' | 'hora' | 'usuario'>
 const sessionKey = 'godeporte:sesion'
 const pendingPaymentKey = 'godeporte:pago-pendiente'
 const delay = (milliseconds: number) => new Promise(resolve => setTimeout(resolve, milliseconds))
+
+type Catalog = { at: number; courts: Court[] }
+const catalogKey = 'godeporte:catalogo:v1'
+
+function initialCatalog(): Catalog | null {
+  const parse = (raw: string | null): Catalog | null => {
+    try {
+      const value = JSON.parse(raw ?? 'null')
+      return value && Number.isFinite(value.at) && Array.isArray(value.courts) ? value : null
+    } catch {
+      return null
+    }
+  }
+  const snapshot = parse(document.getElementById('catalog-inicial')?.textContent ?? null)
+  try {
+    const stored = parse(localStorage.getItem(catalogKey))
+    if (stored && Date.now() - stored.at < 86_400_000 && stored.at > (snapshot?.at ?? 0)) return stored
+  } catch {
+    // The embedded catalog is available when storage is disabled.
+  }
+  return snapshot
+}
 
 function savedSession(): Session | null {
   try {
@@ -31,7 +53,8 @@ function savedSession(): Session | null {
 })
 class App {
   protected readonly copy = messages
-  protected readonly courts = signal<Court[]>([])
+  private readonly initialCatalog = initialCatalog()
+  protected readonly courts = signal<Court[]>(this.initialCatalog?.courts ?? [])
   protected readonly selected = signal<Court | null>(null)
   protected readonly selectedHour = signal<number | null>(null)
   protected readonly confirmation = signal<{ action: () => void; kind: 'book' | 'cancel' } | null>(null)
@@ -49,7 +72,27 @@ class App {
   protected readonly editing = signal<Court | null>(null)
   protected readonly today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Lima' }).format(new Date())
   protected readonly date = signal(this.today)
+  protected readonly month = signal(this.today.slice(0, 7))
+  protected readonly weekdays = Array.from({ length: 7 }, (_, index) => new Intl.DateTimeFormat('es-PE', {
+    weekday: 'short', timeZone: 'UTC',
+  }).format(new Date(Date.UTC(2024, 0, index + 1))))
+  private readonly monthFormatter = new Intl.DateTimeFormat('es-PE', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+  private readonly dayFormatter = new Intl.DateTimeFormat('es-PE', { dateStyle: 'full', timeZone: 'UTC' })
+  protected readonly monthTitle = computed(() => this.monthFormatter.format(new Date(this.month() + '-01T00:00:00Z')))
+  protected readonly calendarDays = computed(() => {
+    const [year, month] = this.month().split('-').map(Number)
+    const first = new Date(Date.UTC(year, month - 1, 1))
+    const offset = (first.getUTCDay() + 6) % 7
+    const last = new Date(Date.UTC(year, month, 0)).getUTCDate()
+    return Array.from({ length: offset + last }, (_, index) => {
+      if (index < offset) return null
+      const day = index - offset + 1
+      const date = new Date(Date.UTC(year, month - 1, day))
+      return { day, key: date.toISOString().slice(0, 10), label: this.dayFormatter.format(date) }
+    })
+  })
   private refreshing = false
+  private catalogRequest = 0
   private returnToSchedule = false
   private readonly configuration = fetch('config.json').then(async result => {
     if (!result.ok) throw new Error(messages.config)
@@ -67,7 +110,11 @@ class App {
       this.tab.set('reservas')
     }
     void this.run(async () => {
-      await this.loadCourts()
+      if (this.initialCatalog) {
+        void this.loadCourts().catch(() => {})
+      } else {
+        await this.loadCourts()
+      }
       const court = this.courtFromUrl()
       if (court) await this.loadSchedule(court, this.date())
       else if (this.tab() === 'reservas') await this.loadBookings()
@@ -137,7 +184,20 @@ class App {
   }
 
   private async loadCourts() {
-    this.courts.set(await this.api<Court[]>('/canchas/'))
+    const request = ++this.catalogRequest
+    const response = await fetch((await this.configuration) + '/canchas/', {
+      cache: 'no-cache', signal: AbortSignal.timeout(12000),
+    })
+    if (!response.ok) throw new Error(messages.request)
+    const courts = await response.json() as Court[]
+    if (!Array.isArray(courts)) throw new Error(messages.request)
+    if (request !== this.catalogRequest) return
+    this.courts.set(courts)
+    try {
+      localStorage.setItem(catalogKey, JSON.stringify({ at: Date.now(), courts }))
+    } catch {
+      // Keep the catalog usable when storage is disabled or full.
+    }
   }
 
   protected open(tab: string) {
@@ -183,6 +243,12 @@ class App {
     return this.run(() => this.loadSchedule(court, this.date()))
   }
 
+  protected moveMonth(delta: number) {
+    const [year, month] = this.month().split('-').map(Number)
+    const target = new Date(Date.UTC(year, month - 1 + delta, 1)).toISOString().slice(0, 7)
+    if (target >= this.today.slice(0, 7)) this.month.set(target)
+  }
+
   protected changeDate(date: string) {
     const court = this.selected()
     if (court && date) return this.run(() => this.loadSchedule(court, date))
@@ -193,6 +259,7 @@ class App {
     this.selected.set(court)
     this.selectedHour.set(null)
     this.date.set(date)
+    this.month.set(date.slice(0, 7))
     this.slots.set([])
     const params = new URLSearchParams({ cancha: court.id, fecha: date })
     this.slots.set(await this.api('/reservas/disponibilidad?' + params))

@@ -1,5 +1,6 @@
 import { execFileSync, spawnSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
+import { preparePages } from './pages-catalog.mjs'
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs'
 
 const project = 'godeporte-academico'
@@ -143,7 +144,7 @@ try {
     if (!data.GATEWAY_URL) {
       writeFileSync(deploymentFile, JSON.stringify({ ...data, GATEWAY_URL: env.GATEWAY_URL }, null, 2) + '\n')
     }
-    writeFileSync('dist/godeporte/browser/config.json', JSON.stringify({ api: env.GATEWAY_URL + '/api' }))
+    await preparePages(env.GATEWAY_URL)
     wrangler(['pages', 'deploy', 'dist/godeporte/browser', '--project-name', pagesProject, '--branch', 'main'])
     await health()
   } else if (action === 'app-secrets') {

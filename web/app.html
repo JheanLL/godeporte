@@ -1,3 +1,4 @@
+<div class="page-content">
 <header>
   <div class="bar">
     <button class="brand" (click)="open('canchas')" i18n>GoDeporte</button>
@@ -50,7 +51,30 @@
         <div class="schedule-layout">
           <section class="panel schedule-slots">
             <h2 i18n>Horarios disponibles</h2>
-            <label i18n>Fecha <input type="date" [min]="today" [value]="date()" [disabled]="busy()" #day (change)="changeDate(day.value)"></label>
+            <div class="date-calendar" role="group" aria-label="Selecciona una fecha" i18n-aria-label>
+              <div class="calendar-heading">
+                <button type="button" [disabled]="busy() || month() === today.slice(0, 7)" (click)="moveMonth(-1)"
+                  aria-label="Mes anterior" i18n-aria-label>‹</button>
+                <strong aria-live="polite">{{ monthTitle() }}</strong>
+                <button type="button" [disabled]="busy()" (click)="moveMonth(1)"
+                  aria-label="Mes siguiente" i18n-aria-label>›</button>
+              </div>
+              <div class="calendar-grid">
+                @for (weekday of weekdays; track $index) {
+                  <span class="weekday" aria-hidden="true">{{ weekday }}</span>
+                }
+                @for (day of calendarDays(); track $index) {
+                  @if (day) {
+                    <button type="button" class="calendar-day" [class.chosen]="date() === day.key"
+                      [class.today]="today === day.key" [attr.aria-pressed]="date() === day.key"
+                      [attr.aria-current]="today === day.key ? 'date' : null" [attr.aria-label]="day.label"
+                      [disabled]="busy() || day.key < today" (click)="changeDate(day.key)">{{ day.day }}</button>
+                  } @else {
+                    <span aria-hidden="true"></span>
+                  }
+                }
+              </div>
+            </div>
             @if (busy()) {
               <p i18n>Cargando horarios…</p>
             } @else {
@@ -184,6 +208,7 @@
     }
   }
 </main>
+</div>
 
 <dialog #confirmDialog aria-labelledby="confirm-title" (close)="confirmation.set(null)">
   @if (confirmation(); as pending) {
