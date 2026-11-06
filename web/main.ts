@@ -1,4 +1,4 @@
-import { Component, provideZonelessChangeDetection, signal } from '@angular/core'
+import { Component, effect, provideZonelessChangeDetection, signal } from '@angular/core'
 import { bootstrapApplication } from '@angular/platform-browser'
 import { messages } from './messages'
 
@@ -27,12 +27,14 @@ function savedSession(): Session | null {
 @Component({
   selector: 'app-root',
   templateUrl: './app.html',
-  host: { '(window:hashchange)': 'openCheckIn()' },
+  host: { '(window:hashchange)': 'routeChanged()' },
 })
 class App {
   protected readonly copy = messages
   protected readonly courts = signal<Court[]>([])
   protected readonly selected = signal<Court | null>(null)
+  protected readonly selectedHour = signal<number | null>(null)
+  protected readonly confirmation = signal<{ action: () => void; kind: 'book' | 'cancel' } | null>(null)
   protected readonly slots = signal<{ hora: number; libre: boolean }[]>([])
   protected readonly bookings = signal<Booking[]>([])
   protected readonly session = signal<Session | null>(savedSession())
@@ -48,26 +50,53 @@ class App {
   protected readonly today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Lima' }).format(new Date())
   protected readonly date = signal(this.today)
   private refreshing = false
+  private returnToSchedule = false
   private readonly configuration = fetch('config.json').then(async result => {
     if (!result.ok) throw new Error(messages.config)
     return (await result.json() as { api: string }).api
   })
 
   constructor() {
+    effect(onCleanup => {
+      if (!this.status() || this.paying()) return
+      const timer = setTimeout(() => this.status.set(''), 6500)
+      onCleanup(() => clearTimeout(timer))
+    })
     this.openCheckIn()
     if (this.tab() === 'canchas' && this.session() && sessionStorage.getItem(pendingPaymentKey)) {
       this.tab.set('reservas')
     }
     void this.run(async () => {
       await this.loadCourts()
-      if (this.tab() === 'reservas') await this.loadBookings()
+      const court = this.courtFromUrl()
+      if (court) await this.loadSchedule(court, this.date())
+      else if (this.tab() === 'reservas') await this.loadBookings()
     })
     setInterval(() => {
-      if (this.tab() === 'reservas' && this.session() && !this.busy() && !this.refreshing && !document.hidden) {
+      if (this.isBookings() && this.session() && !this.busy() && !this.refreshing && !document.hidden) {
         this.refreshing = true
         void this.loadBookings().catch(() => {}).finally(() => { this.refreshing = false })
       }
     }, 5000)
+  }
+
+  private courtFromUrl() {
+    const id = new URLSearchParams(location.hash.slice(1)).get('horarios')
+    return this.courts().find(court => court.id === id)
+  }
+
+  protected routeChanged() {
+    const court = this.courtFromUrl()
+    if (court) {
+      void this.run(() => this.loadSchedule(court, this.date()))
+    } else if (this.tab() === 'horarios') {
+      this.open('canchas')
+    }
+    this.openCheckIn()
+  }
+
+  private isBookings() {
+    return this.tab() === 'reservas' || this.tab() === 'dashboard'
   }
 
   protected openCheckIn() {
@@ -114,13 +143,20 @@ class App {
   protected open(tab: string) {
     this.tab.set(tab)
     this.status.set('')
-    if (tab === 'reservas') void this.run(() => this.loadBookings())
+    if (tab !== 'horarios' && this.courtFromUrl()) history.replaceState(null, '', location.pathname + location.search)
+    if (this.isBookings()) {
+      this.bookings.set([])
+      this.receipt.set(null)
+      void this.run(() => this.loadBookings())
+    }
+    window.scrollTo(0, 0)
   }
 
   private async loadBookings() {
     const actor = this.session()
-    const bookings = await this.api<Booking[]>('/reservas/')
-    if (this.session() !== actor) return
+    const view = this.tab()
+    const bookings = await this.api<Booking[]>(view === 'dashboard' ? '/reservas/' : '/reservas/?mias=1')
+    if (this.session() !== actor || this.tab() !== view) return
     this.bookings.set(bookings)
     if (actor?.role === 'admin') await this.loadNames(bookings.map(item => item.usuario))
     const pending = sessionStorage.getItem(pendingPaymentKey)
@@ -141,14 +177,36 @@ class App {
     return actor?.role === 'cliente' ? actor.nombre : this.names()[id]
   }
 
-  protected choose(court: Court, date = this.date()) {
-    return this.run(async () => {
-      this.selected.set(court)
-      this.date.set(date)
-      this.slots.set([])
-      const params = new URLSearchParams({ cancha: court.id, fecha: date })
-      this.slots.set(await this.api('/reservas/disponibilidad?' + params))
-    })
+  protected choose(court: Court) {
+    history.pushState(null, '', '#' + new URLSearchParams({ horarios: court.id }))
+    window.scrollTo(0, 0)
+    return this.run(() => this.loadSchedule(court, this.date()))
+  }
+
+  protected changeDate(date: string) {
+    const court = this.selected()
+    if (court && date) return this.run(() => this.loadSchedule(court, date))
+  }
+
+  private async loadSchedule(court: Court, date: string) {
+    this.tab.set('horarios')
+    this.selected.set(court)
+    this.selectedHour.set(null)
+    this.date.set(date)
+    this.slots.set([])
+    const params = new URLSearchParams({ cancha: court.id, fecha: date })
+    this.slots.set(await this.api('/reservas/disponibilidad?' + params))
+  }
+
+  protected confirm(dialog: HTMLDialogElement, kind: 'book' | 'cancel', action: () => void) {
+    this.confirmation.set({ kind, action })
+    dialog.showModal()
+  }
+
+  protected accept(dialog: HTMLDialogElement) {
+    const confirmation = this.confirmation()
+    dialog.close()
+    confirmation?.action()
   }
 
   protected account(event: SubmitEvent, register: boolean) {
@@ -159,6 +217,13 @@ class App {
       const session = await this.api<Session>('/auth/login', 'POST', { email, password })
       sessionStorage.setItem(sessionKey, JSON.stringify(session))
       this.session.set(session)
+      const court = this.selected()
+      if (this.returnToSchedule && court) {
+        this.returnToSchedule = false
+        history.replaceState(null, '', '#' + new URLSearchParams({ horarios: court.id }))
+        this.tab.set('horarios')
+        return
+      }
       this.open('canchas')
       this.openCheckIn()
       if (this.checkInCode() && session.role !== 'admin') {
@@ -172,6 +237,7 @@ class App {
     sessionStorage.removeItem(sessionKey)
     sessionStorage.removeItem(pendingPaymentKey)
     this.session.set(null)
+    this.returnToSchedule = false
     this.bookings.set([])
     this.names.set({})
     this.entry.set(null)
@@ -180,18 +246,25 @@ class App {
     this.open('canchas')
   }
 
-  protected reserve(hora: number) {
+  protected reserve(dialog: HTMLDialogElement) {
+    const hora = this.selectedHour()
+    const court = this.selected()
+    if (hora === null || !court) return
     if (!this.session()) {
+      this.returnToSchedule = true
       this.open('login')
       this.status.set(messages.loginRequired)
       return
     }
-    return this.run(async () => {
-      await this.api('/reservas/', 'POST', { cancha: this.selected()?.id, fecha: this.date(), hora })
-      await this.loadBookings()
+    const fecha = this.date()
+    this.confirm(dialog, 'book', () => void this.run(async () => {
+      await this.api('/reservas/', 'POST', { cancha: court.id, fecha, hora })
+      history.replaceState(null, '', location.pathname + location.search)
       this.tab.set('reservas')
+      await this.loadBookings()
       this.status.set(messages.reserved)
-    })
+      window.scrollTo(0, 0)
+    }))
   }
 
   protected pay(item: Booking, aprobado: boolean) {
@@ -235,7 +308,11 @@ class App {
     if (sessionStorage.getItem(pendingPaymentKey) === item.id) sessionStorage.removeItem(pendingPaymentKey)
   }
 
-  protected cancel(item: Booking) {
+  protected confirmCancellation(dialog: HTMLDialogElement, item: Booking) {
+    this.confirm(dialog, 'cancel', () => void this.cancel(item))
+  }
+
+  private cancel(item: Booking) {
     return this.run(async () => {
       await this.api('/reservas/' + item.id + '/cancelar', 'POST')
       this.receipt.set(null)

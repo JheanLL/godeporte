@@ -73,7 +73,7 @@ app.get('/disponibilidad', async c => {
 
 app.get('/', async c => {
   const actor = await user(c)
-  const query = actor.role === 'admin'
+  const query = actor.role === 'admin' && c.req.query('mias') !== '1'
     ? c.env.DB.prepare('SELECT * FROM reservas ORDER BY fecha DESC, hora DESC LIMIT 200')
     : c.env.DB.prepare('SELECT * FROM reservas WHERE usuario=? ORDER BY fecha DESC, hora DESC LIMIT 200').bind(actor.id)
   return c.json((await query.all<Booking>()).results.map(effective))

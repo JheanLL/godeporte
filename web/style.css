@@ -54,3 +54,30 @@ input { padding: 10px; border: 1px solid #a9bdb0; width: 100%; background: white
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
 .badge { display: inline-block; margin: 0; padding: 4px 8px; border-radius: 20px; color: var(--muted); background: #edf0ea; font-size: .7rem; font-weight: 800; letter-spacing: .06em; }
 .badge.confirmed { background: #dff5d2; color: #23583a; }
+
+main { min-height: 59vh; }
+.schedule-heading { padding-top: 12px; }
+.schedule-heading h1 { margin-bottom: .18em; }
+.schedule-heading > p:last-child, .slot-legend { color: var(--muted); }
+.schedule-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(235px, 1fr); gap: 18px; align-items: start; margin-bottom: 24px; }
+.schedule-slots label { max-width: 240px; margin-top: 18px; }
+.schedule-slots .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(82px, 1fr)); }
+.schedule-summary { border-top: 4px solid #63aa67; }
+.schedule-summary button { width: 100%; }
+.slots .chosen { background: #c8f29c; border-color: #387449; color: var(--ink); }
+.toast { position: fixed; z-index: 5; inset: auto 20px 18px auto; max-width: min(410px, calc(100% - 40px)); margin: 0; box-shadow: 0 8px 28px #102c2230; }
+dialog { width: min(440px, calc(100vw - 32px)); padding: 25px; border: 1px solid var(--line); border-radius: 20px; color: var(--ink); box-shadow: 0 20px 75px #102c2250; }
+dialog::backdrop { background: #0c221ab0; }
+.dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.danger { background: #8c3030; color: white; border-color: #8c3030; }
+.site-footer { background: #101e19; color: #eff7ef; margin-top: 24px; }
+.footer-inner { width: min(100%, 1170px); margin: auto; display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 26px; padding: 36px clamp(16px, 4vw, 34px); }
+.footer-brand { font-size: 1.6rem; font-weight: 850; margin: 0; }
+.footer-inner h2 { font-size: 1.02rem; }
+.footer-note { color: #bfd1c4; font-size: .88rem; }
+.footer-map iframe { width: 100%; min-height: 155px; border: 0; border-radius: 12px; display: block; margin: 10px 0; }
+.footer-map a { color: #d5f4ae; }
+@media (max-width: 720px) {
+  .schedule-layout, .footer-inner { grid-template-columns: 1fr; }
+  .schedule-layout { gap: 0; }
+}

@@ -4,8 +4,9 @@
     <nav aria-label="Navegación principal" i18n-aria-label>
       <button (click)="open('canchas')" i18n>Canchas</button>
       @if (session(); as account) {
-        <button (click)="open('reservas')">{{ account.role === 'admin' ? copy.dashboard : copy.bookings }}</button>
+        <button (click)="open('reservas')" i18n>Mis reservas</button>
         @if (account.role === 'admin') {
+          <button (click)="open('dashboard')" i18n>Dashboard</button>
           <button (click)="open('admin')" i18n>Administrar</button>
           <button (click)="open('ingreso')" i18n>Validar ingreso</button>
         }
@@ -17,7 +18,7 @@
   </div>
 </header>
 <main>
-  @if (status()) { <p class="status" role="status">@if (paying()) { <span class="spinner" aria-hidden="true"></span> } {{ status() }}</p> }
+  @if (status()) { <p class="status toast" role="status">@if (paying()) { <span class="spinner" aria-hidden="true"></span> } {{ status() }}</p> }
   @switch (tab()) {
     @case ('canchas') {
       <section class="intro">
@@ -37,16 +38,47 @@
           </article>
         }
       </section>
+    }
+    @case ('horarios') {
       @if (selected(); as court) {
-        <section class="panel">
-          <h2 i18n>Horarios · {{ court.nombre }}</h2>
-          <label i18n>Fecha <input type="date" [min]="today" [value]="date()" [disabled]="busy()" #day (change)="day.value && choose(court, day.value)"></label>
-          <div class="slots">
-            @for (slot of slots(); track slot.hora) {
-              <button [disabled]="busy() || !slot.libre" (click)="reserve(slot.hora)">{{ time(slot.hora) }}</button>
+        <div class="schedule-heading">
+          <button (click)="open('canchas')" i18n>← Volver a canchas</button>
+          <p class="eyebrow" i18n>Elige tu horario</p>
+          <h1>{{ court.nombre }}</h1>
+          <p>{{ court.ubicacion }} · {{ court.caracteristicas }}</p>
+        </div>
+        <div class="schedule-layout">
+          <section class="panel schedule-slots">
+            <h2 i18n>Horarios disponibles</h2>
+            <label i18n>Fecha <input type="date" [min]="today" [value]="date()" [disabled]="busy()" #day (change)="changeDate(day.value)"></label>
+            @if (busy()) {
+              <p i18n>Cargando horarios…</p>
+            } @else {
+              <div class="slots">
+                @for (slot of slots(); track slot.hora) {
+                  <button [disabled]="!slot.libre" [attr.aria-pressed]="selectedHour() === slot.hora"
+                    [class.chosen]="selectedHour() === slot.hora" (click)="selectedHour.set(slot.hora)">{{ time(slot.hora) }}</button>
+                } @empty {
+                  <p i18n>Todavía no hay horarios para mostrar.</p>
+                }
+              </div>
+              @if (slots().length) {
+                <p class="slot-legend" i18n>Los horarios en gris no están disponibles.</p>
+              }
             }
-          </div>
-        </section>
+          </section>
+          <aside class="panel schedule-summary">
+            <p class="eyebrow" i18n>Tu reserva</p>
+            <h2>{{ court.nombre }}</h2>
+            @if (selectedHour() !== null) {
+              <p>{{ date() }} · {{ time(selectedHour() ?? 0) }}</p>
+            } @else {
+              <p i18n>Selecciona una hora para continuar.</p>
+            }
+            <p><strong>{{ price(court.centimos) }}</strong> <span i18n>por hora</span></p>
+            <button class="primary" [disabled]="busy() || selectedHour() === null" (click)="reserve(confirmDialog)" i18n>Reservar</button>
+          </aside>
+        </div>
       }
     }
     @case ('login') {
@@ -71,9 +103,10 @@
         </form>
       </section>
     }
+    @case ('dashboard')
     @case ('reservas') {
-      <h1>{{ session()?.role === 'admin' ? copy.dashboardTitle : copy.bookings }}</h1>
-      @if (session()?.role === 'admin') {
+      <h1>{{ tab() === 'dashboard' ? copy.dashboardTitle : copy.bookings }}</h1>
+      @if (tab() === 'dashboard') {
         <p i18n>{{ count('CONFIRMADA') }} confirmadas · {{ count('PENDIENTE') }} pendientes · {{ count('CANCELADA') }} canceladas</p>
       }
       <section class="grid">
@@ -84,7 +117,7 @@
             @if (customerName(item.usuario); as name) { <p i18n>Reserva de <strong>{{ name }}</strong></p> }
             <p>{{ item.fecha }} · {{ time(item.hora) }} · {{ price(item.centimos) }}</p>
             <div class="actions">
-              @if (item.estado === 'PENDIENTE' && session()?.role === 'cliente') {
+              @if (item.estado === 'PENDIENTE' && tab() === 'reservas') {
                 <p i18n>Vence a las {{ deadline(item.vence) }}</p>
                 <button class="primary" (click)="pay(item, true)" [disabled]="busy()" i18n>Simular aprobación</button>
                 <button (click)="pay(item, false)" [disabled]="busy()" i18n>Simular rechazo</button>
@@ -93,7 +126,7 @@
                 <button (click)="showReceipt(item)" [disabled]="busy()" i18n>Ver QR</button>
               }
               @if (item.estado === 'PENDIENTE' || item.estado === 'CONFIRMADA') {
-                <button (click)="cancel(item)" [disabled]="busy()" i18n>Cancelar reserva</button>
+                <button (click)="confirmCancellation(confirmDialog, item)" [disabled]="busy()" i18n>Cancelar reserva</button>
               }
             </div>
           </article>
@@ -151,3 +184,45 @@
     }
   }
 </main>
+
+<dialog #confirmDialog aria-labelledby="confirm-title" (close)="confirmation.set(null)">
+  @if (confirmation(); as pending) {
+    @if (pending.kind === 'book') {
+      <h2 id="confirm-title" i18n>Confirmar reserva</h2>
+      <p>{{ selected()?.nombre }} · {{ date() }} · {{ time(selectedHour() ?? 0) }}</p>
+      <p i18n>Guardaremos el horario durante 10 minutos.</p>
+    } @else {
+      <h2 id="confirm-title" i18n>Cancelar reserva</h2>
+      <p i18n>El horario quedará disponible para otras personas.</p>
+    }
+    <div class="dialog-actions">
+      <button (click)="confirmDialog.close()" autofocus i18n>Volver</button>
+      @if (pending.kind === 'book') {
+        <button class="primary" (click)="accept(confirmDialog)" i18n>Confirmar reserva</button>
+      } @else {
+        <button class="danger" (click)="accept(confirmDialog)" i18n>Cancelar reserva</button>
+      }
+    </div>
+  }
+</dialog>
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div>
+      <p class="footer-brand">GoDeporte</p>
+      <p i18n>Reserva espacios deportivos en Pucallpa.</p>
+      <p class="footer-note" i18n>Demostración con contactos, direcciones y pagos simulados.</p>
+    </div>
+    <div class="footer-links">
+      <h2 i18n>Información de ejemplo</h2>
+      <p i18n>Complejo Cancha Verde<br>Pasaje Deporte 100, Pucallpa</p>
+      <p i18n>Contacto · hola@godeporte.test<br>Atención · lunes a domingo, 8:00–22:00</p>
+      <button (click)="open('canchas')" i18n>Ver canchas</button>
+    </div>
+    <div class="footer-map">
+      <h2 i18n>Mapa de referencia</h2>
+      <iframe title="Mapa de referencia del Estadio Aliardo Soria" i18n-title loading="lazy"
+        src="https://www.openstreetmap.org/export/embed.html?bbox=-74.546%2C-8.391%2C-74.532%2C-8.381&amp;layer=mapnik&amp;marker=-8.386061%2C-74.53918"></iframe>
+      <a href="https://www.openstreetmap.org/way/64097514" target="_blank" rel="noopener noreferrer" i18n>Ver Estadio Aliardo Soria en el mapa</a>
+    </div>
+  </div>
+</footer>

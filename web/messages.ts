@@ -13,7 +13,6 @@ export const messages = {
   invalidCode: 'Escanea el QR de acceso o pega el enlace completo.',
   checkIn: 'Ingreso registrado.',
   saved: 'Cancha guardada.',
-  dashboard: 'Dashboard',
   dashboardTitle: 'Dashboard de reservas',
   bookings: 'Mis reservas',
   edit: 'Editar cancha',

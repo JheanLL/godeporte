@@ -134,7 +134,7 @@ pnpm exec wrangler d1 execute godeporte-academico-auth --remote \
   --command "UPDATE usuarios SET role = 'admin' WHERE email = 'persona@example.test' RETURNING email, role;"
 ```
 
-El comando debe devolver el correo con rol `admin`. La persona debe cerrar sesión y volver a entrar. El menú mostrará **Dashboard**, **Administrar** y **Validar ingreso**.
+El comando debe devolver el correo con rol `admin`. La persona debe cerrar sesión y volver a entrar. El menú mostrará **Dashboard**, **Administrar** y **Validar ingreso**. Para reservar y simular pagos propios, la cuenta administradora usa **Mis reservas**. **Dashboard** reúne las reservas de todas las cuentas.
 
 Para quitarle el acceso administrativo, devuelve la cuenta al rol de cliente. Así conserva sus reservas.
 

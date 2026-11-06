@@ -131,6 +131,11 @@ paths:
     get:
       summary: Consultar reservas propias o dashboard administrativo
       security: [{bearer: []}]
+      parameters:
+        - in: query
+          name: mias
+          description: Limita el listado a las reservas de la cuenta autenticada.
+          schema: {type: string, enum: ['1']}
       responses:
         '200':
           description: Reservas
