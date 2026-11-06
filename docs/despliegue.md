@@ -1,7 +1,5 @@
 # Despliegue de GoDeporte Académico
 
-El aprovisionamiento crea cinco bases D1, dos colas y un proyecto Pages. El despliegue aplica los esquemas, compila Angular, publica seis Workers por separado y sube la web a Pages. Kafka y Redis usan servicios propios en Aiven y Upstash.
-
 Si estás completando la [web que ya está publicada](https://godeporte-academico.pages.dev), empieza en [Aiven](#3-aiven--kafka) y [Upstash](#4-upstash--redis). Los pasos 1 y 2 sirven para crear otro despliegue.
 
 ## 1. Autorizar Cloudflare y crear recursos
@@ -19,24 +17,24 @@ pnpm exec wrangler whoami
 node scripts/cloudflare.mjs provision ID_DE_CUENTA SUBDOMINIO_WORKERS
 ```
 
-El segundo argumento de `provision` es opcional. Si se omite, el script obtiene la URL del Gateway de la salida del primer despliegue. El script reutiliza recursos que tengan los nombres del proyecto y guarda solo identificadores y URLs en `.local/cloudflare.json`. Si una operación falla, corrige el mensaje y repite el comando. [Configuración de Wrangler](https://developers.cloudflare.com/workers/wrangler/configuration/).
+Sustituye `ID_DE_CUENTA` y `SUBDOMINIO_WORKERS` por los valores de tu cuenta. `provision` crea o reutiliza cinco bases D1, dos colas y un proyecto Pages. Guarda sus identificadores en `.local/cloudflare.json`.
 
 ## 2. Publicar Workers y Pages
+
+Desde la raíz del repositorio, después de completar el paso 1, ejecuta lo siguiente.
 
 ```bash
 node scripts/cloudflare.mjs deploy
 node scripts/cloudflare.mjs app-secrets
 ```
 
-El primer comando despliega con la sesión de Cloudflare y verifica `/health` del Gateway y de los cinco servicios. El segundo genera y configura las claves compartidas del JWT y de las llamadas internas mediante Wrangler. El script las envía directamente a Cloudflare y conserva las existentes si la configuración está completa. Si se interrumpió la configuración y quedó parcial, `app-secrets --rotate` sincroniza claves nuevas e invalida las sesiones de usuario existentes.
-
-Antes de continuar, revisa las URLs de Pages y del Gateway en `.local/cloudflare.json`. La web ya puede cargar el catálogo. Kafka habilita la confirmación del pago. Redis habilita el bloqueo temporal auxiliar y D1 mantiene la exclusividad del horario.
+Al terminar, abre la URL `WEB_ORIGIN` que quedó en `.local/cloudflare.json` y comprueba que carga el catálogo. El despliegue también comprueba los endpoints de estado del Gateway y de los cinco servicios.
 
 ## 3. Aiven · Kafka
 
 ### 3.1 Crear o reutilizar el servicio
 
-1. Abre [Aiven Console](https://console.aiven.io/) e inicia sesión. En la parte superior elige el **proyecto** donde quedará el servicio. Anota el nombre técnico del proyecto si vas a usar CLI.
+1. Abre [Aiven Console](https://console.aiven.io/) e inicia sesión. En la parte superior elige el **proyecto** donde quedará el servicio.
 2. En **Services** busca el Kafka del curso. Si ya existe, ábrelo y pasa al paso 3.2. Para crearlo, elige **Create service → Apache Kafka → Free**. En **Service name** escribe `godeporte-academico`, elige el grupo de región que te ofrezca el plan gratuito y pulsa **Create service**. Espera el estado **Running**. [Creación del servicio gratuito](https://aiven.io/docs/products/kafka/free-tier/create-free-tier-kafka-service).
 
 ### 3.2 Crear el tema `godeporte-pagos`
@@ -54,15 +52,15 @@ Pulsa **Create topic** y verifica que `godeporte-pagos` aparezca en **Topics**.
 
    En **Produce a message**, mira la dirección del primer `curl`. Si la dirección tiene la forma `https://USUARIO:CONTRASEÑA@kafka.example.test:13189/topics/godeporte-pagos`, el valor para GoDeporte es `https://kafka.example.test:13189`. En tu caso usa el host y puerto que aparecen entre `@` y `/topics/`. Puedes dejar vacío el campo `base_uri`.
 
-3. **Guarda la URL en Cloudflare.** Abre **Workers & Pages → godeporte-academico-pagos → Settings → Variables and Secrets → Add**. Selecciona **Text**, escribe `KAFKA_URL`, pega la URL HTTPS del paso 2 y pulsa **Deploy**. Repite en **godeporte-academico-reservas**.
-4. **Guarda el usuario y la contraseña en Cloudflare.** En Aiven, dentro del servicio Kafka, abre **Users** y busca el usuario seleccionado en el paso 2. En Cloudflare, entra a **Workers & Pages → godeporte-academico-pagos → Settings → Variables and Secrets → Add**. Agrega estas dos filas, pulsa **Deploy** y repite en **godeporte-academico-reservas**. [Secretos de Cloudflare Workers](https://developers.cloudflare.com/workers/configuration/secrets/).
+3. **Configura Pagos y Reservas en Cloudflare.** En Aiven, abre **Users** dentro del servicio Kafka para obtener la contraseña del usuario del paso 2. En Cloudflare, abre **Workers & Pages → godeporte-academico-pagos → Settings → Variables and Secrets → Add** y agrega estos campos.
 
    | Type | Variable name | Value |
    | --- | --- | --- |
-   | **Text** | `KAFKA_USER` | Nombre del usuario de Aiven, por ejemplo `avnadmin`. |
-   | **Secret** | `KAFKA_PASSWORD` | Contraseña original de ese usuario. Pega únicamente la contraseña. |
+   | **Text** | `KAFKA_URL` | URL HTTPS del paso 2. |
+   | **Text** | `KAFKA_USER` | Usuario del paso 2. |
+   | **Secret** | `KAFKA_PASSWORD` | Contraseña original de ese usuario. |
 
-   Los Workers forman el encabezado HTTP Basic. Si ya configuraste `KAFKA_AUTH`, sigue siendo válido cuando falte alguno de los dos campos nuevos.
+   Pulsa **Deploy** y repite en **godeporte-academico-reservas**. Comprueba que los tres nombres aparezcan en **Variables and Secrets** de ambos Workers. [Secretos de Cloudflare Workers](https://developers.cloudflare.com/workers/configuration/secrets/).
 
 ### Alternativa CLI para crear el servicio, activar REST y crear el tema
 
@@ -82,34 +80,31 @@ avn service topic-create "$servicio_kafka" godeporte-pagos --project "$proyecto_
 avn service topic-get "$servicio_kafka" godeporte-pagos --project "$proyecto_aiven"
 ```
 
-Si Aiven rechaza `free-0` por API para tu cuenta, crea el servicio **Free** desde la consola y retoma en `service wait`. La sesión de Aiven es independiente de Wrangler y GitHub. Aiven también ofrece [MCP con autorización por navegador](https://aiven.io/docs/tools/mcp-server) si tu organización ya tiene ese acceso habilitado. [Activación de Kafka REST por configuración](https://aiven.io/docs/products/kafka/concepts/kafka-rest-api).
+Si Aiven rechaza `free-0`, crea el servicio **Free** desde la consola y retoma en `service wait`. Después, completa el paso 3.3 desde la obtención de la URL.
 
 ## 4. Upstash · Redis
 
 ### 4.1 Abrir la base y encontrar los dos valores
 
 1. Abre [Upstash Console](https://console.upstash.com/) e inicia sesión. Entra a **Redis** y pulsa el nombre de tu base para abrir su ficha. Si todavía no existe, pulsa **Create Database**, escribe `godeporte-academico`, selecciona una región ofrecida y el plan **Free**, y pulsa **Create**.
-2. En la ficha de la base, busca la sección **Connect** y selecciona su pestaña **REST**. **REST** está dentro de **Connect**, no es una opción del menú lateral. Si no aparece esa pestaña, busca **Connect → JavaScript**. El ejemplo de conexión identifica los mismos dos valores. Otra presentación de la ficha muestra **Endpoint** y **Token**. En ella, toma el endpoint **HTTPS**.
+2. En la ficha de la base, busca la sección **Connect** y selecciona su pestaña **REST**. Si la pestaña **REST** no aparece, abre **Connect → JavaScript**. Si tu ficha muestra **Endpoint** y **Token**, usa el endpoint **HTTPS**.
 3. Localiza `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN`. Si ves **Read-Only Token**, deja el selector apagado para usar el token estándar, que permite escribir y liberar el bloqueo. Conserva solo el valor de cada campo, sin comillas ni el nombre a la izquierda del signo `=`. [Dónde encontrar la URL y el token REST](https://upstash.com/docs/redis/troubleshooting/http_unauthorized) · [Diferencia entre token estándar y de lectura](https://upstash.com/docs/redis/features/restapi).
 
 ### 4.2 Cambiar al panel de Cloudflare y cargar los valores
 
-1. Abre otra pestaña con el [panel de Cloudflare](https://dash.cloudflare.com/). Entra en la cuenta académica y busca **Workers & Pages** desde el menú de la cuenta o el buscador del panel.
-2. En la lista, abre **godeporte-academico-reservas**. Es un **Worker de Cloudflare** separado del proyecto web Pages **godeporte-academico**. En el Worker, abre **Settings → Variables and Secrets → Add**.
-3. En el formulario elige el tipo y completa los campos de la primera fila. Pulsa **Add variable** para la segunda fila.
+1. En la cuenta académica del [panel de Cloudflare](https://dash.cloudflare.com/), abre **Workers & Pages → godeporte-academico-reservas → Settings → Variables and Secrets → Add**.
+2. Agrega ambas variables con los valores del paso 4.1.
 
-| Type | Variable name en Cloudflare | Value que viene de Upstash |
-| --- | --- | --- |
-| **Text** | `REDIS_URL` | Valor de `UPSTASH_REDIS_REST_URL`, por ejemplo `https://redis-academico.example.test`. |
-| **Secret** | `REDIS_TOKEN` | Valor de `UPSTASH_REDIS_REST_TOKEN` estándar. Pega el valor solo, sin prefijo `Bearer`. |
+   | Type | Variable name | Value |
+   | --- | --- | --- |
+   | **Text** | `REDIS_URL` | Valor de `UPSTASH_REDIS_REST_URL`. |
+   | **Secret** | `REDIS_TOKEN` | Valor de `UPSTASH_REDIS_REST_TOKEN` estándar, sin prefijo `Bearer`. |
 
-4. Pulsa **Deploy**. Al volver a **Variables and Secrets**, verifica que se vean los dos nombres. Cloudflare oculta el valor de `REDIS_TOKEN`. GoDeporte usa la URL HTTPS de la base y añade el encabezado de autorización al conectarse. [Formulario de secretos de Cloudflare](https://developers.cloudflare.com/workers/configuration/secrets/).
-
-Con una cuenta nativa de Upstash, su [API de administración](https://upstash.com/docs/devops/developer-api/redis/create_database_global) también permite crear la base con `"plan": "free"`. La CLI 1.6 no permite elegir el plan al crearla. Para la entrega usa una base permanente de tu cuenta.
+3. Pulsa **Deploy**. Comprueba que ambos nombres aparezcan en **Variables and Secrets** del Worker. [Secretos de Cloudflare Workers](https://developers.cloudflare.com/workers/configuration/secrets/).
 
 ## 5. Habilitar GitHub Actions para despliegues posteriores
 
-El despliegue anterior funciona con el login de Wrangler. Para ejecutar el mismo comando en GitHub Actions, autentica `gh` si es necesario y sincroniza las variables públicas de Cloudflare.
+Este paso es opcional. Para desplegar desde GitHub Actions, abre una terminal en la raíz del repositorio con `gh` autenticado y sincroniza las variables públicas de Cloudflare.
 
 ```bash
 gh api user --jq .login
@@ -118,7 +113,7 @@ node scripts/cloudflare.mjs github
 
 1. En **Cloudflare → My Profile → API Tokens → Create Token → Create Custom Token**, limita el token a la cuenta académica. Concede **D1: Edit**, **Queues: Edit**, **Workers Scripts: Edit** y **Cloudflare Pages: Edit**. Añade **Account Settings: Read** si tu política requiere ese permiso para consultar la cuenta. [Permisos de Cloudflare](https://developers.cloudflare.com/workers/authorization/).
 2. En **GitHub → Settings → Environments → academico → Environment secrets**, crea `CLOUDFLARE_API_TOKEN` directamente en el formulario.
-3. Desde la raíz del repositorio ejecuta `gh workflow run deploy.yml --ref main`. Sigue la ejecución en **Actions → Desplegar GoDeporte Académico**. El workflow de CI del repositorio sigue ejecutando las pruebas con recursos locales.
+3. Desde la raíz del repositorio ejecuta `gh workflow run deploy.yml --ref main`. Sigue la ejecución en **Actions → Desplegar GoDeporte Académico**.
 
 ## 6. Administrador y demostración
 
@@ -129,8 +124,8 @@ SELECT id, email, role FROM usuarios WHERE email = 'correo-del-administrador@exa
 UPDATE usuarios SET role = 'admin' WHERE email = 'correo-del-administrador@example.test';
 ```
 
-Sal de la aplicación y vuelve a entrar para renovar el JWT. El menú debe mostrar **Dashboard** y **Administrar**. Opcionalmente configura `ADMIN_EMAIL` en el Worker Auth con el correo ya registrado.
+Sal de la aplicación y vuelve a entrar para renovar el JWT. El menú debe mostrar **Dashboard** y **Administrar**.
 
-Comprueba el estado del despliegue con `node scripts/cloudflare.mjs health`. Desde Pages, con una cuenta de demostración, reserva una cancha y simula una aprobación. Actualiza el historial tras el cron de Kafka y abre el QR. Con la cuenta de administrador, valida el código en **Administrar**. Repite con un rechazo y comprueba que se libera el horario.
+Desde la raíz del repositorio, ejecuta `node scripts/cloudflare.mjs health` y comprueba que todas las rutas devuelvan `OK`. En Pages, reserva una cancha y simula una aprobación. Actualiza el historial hasta que la reserva aparezca confirmada y abre el QR. Con la cuenta de administrador, valida el código en **Administrar**. Repite con un rechazo y comprueba que el horario se libera.
 
 Si un pago sigue en proceso, revisa los logs de Pagos y Reservas. Un `401` de Aiven apunta al encabezado Basic Auth. Un `403` apunta a permisos del usuario o ACL. Si se confirma la reserva pero no aparece el QR, revisa la cola `godeporte-academico-avisos` y su cola de fallos en Cloudflare.
