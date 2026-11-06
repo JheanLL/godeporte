@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs'
 
 const project = 'godeporte-academico'
+const pagesProject = 'godeporte'
 const repo = 'JheanLL/godeporte'
 const services = ['auth', 'canchas', 'pagos', 'reservas', 'notificaciones']
 const deploymentFile = '.local/cloudflare.json'
@@ -59,10 +60,10 @@ function provision() {
     wrangler(['queues', 'create', name])
   }
 
-  const pages = () => json(['pages', 'project', 'list', '--json']).find(row => row['Project Name'] === project)
+  const pages = () => json(['pages', 'project', 'list', '--json']).find(row => row['Project Name'] === pagesProject)
   let page = pages()
   if (!page) {
-    wrangler(['pages', 'project', 'create', project, '--production-branch', 'main', '--force'])
+    wrangler(['pages', 'project', 'create', pagesProject, '--production-branch', 'main', '--force'])
     page = pages()
   }
   const domain = page?.['Project Domains']?.split(', ').find(value => value.endsWith('.pages.dev'))
@@ -143,7 +144,7 @@ try {
       writeFileSync(deploymentFile, JSON.stringify({ ...data, GATEWAY_URL: env.GATEWAY_URL }, null, 2) + '\n')
     }
     writeFileSync('dist/godeporte/browser/config.json', JSON.stringify({ api: env.GATEWAY_URL + '/api' }))
-    wrangler(['pages', 'deploy', 'dist/godeporte/browser', '--project-name', project, '--branch', 'main'])
+    wrangler(['pages', 'deploy', 'dist/godeporte/browser', '--project-name', pagesProject, '--branch', 'main'])
     await health()
   } else if (action === 'app-secrets') {
     settings(false)

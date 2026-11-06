@@ -1,6 +1,6 @@
 # Despliegue de GoDeporte
 
-Si estás completando la [web que ya está publicada](https://godeporte-academico.pages.dev), empieza en [Aiven](#3-aiven--kafka) y [Upstash](#4-upstash--redis). Los pasos 1 y 2 sirven para crear otro despliegue.
+Si estás completando la [web que ya está publicada](https://godeporte.pages.dev), empieza en [Aiven](#3-aiven--kafka) y [Upstash](#4-upstash--redis). Los pasos 1 y 2 sirven para crear otro despliegue.
 
 ## 1. Autorizar Cloudflare y crear recursos
 
@@ -17,7 +17,7 @@ pnpm exec wrangler whoami
 node scripts/cloudflare.mjs provision ID_DE_CUENTA SUBDOMINIO_WORKERS
 ```
 
-Sustituye `ID_DE_CUENTA` y `SUBDOMINIO_WORKERS` por los valores de tu cuenta. `provision` crea o reutiliza cinco bases D1, dos colas y un proyecto Pages. Guarda sus identificadores en `.local/cloudflare.json`.
+Sustituye `ID_DE_CUENTA` y `SUBDOMINIO_WORKERS` por los valores de tu cuenta. `provision` crea o reutiliza cinco bases D1, dos colas y el proyecto Pages `godeporte`. Guarda sus identificadores en `.local/cloudflare.json`.
 
 ## 2. Publicar Workers y Pages
 
@@ -119,7 +119,7 @@ node scripts/cloudflare.mjs github
 
 ### 6.1 Dar o quitar el rol de administrador
 
-1. En la [web de GoDeporte](https://godeporte-academico.pages.dev), elige **Iniciar sesión → Crear cuenta** y registra el correo de la persona que administrará el complejo. Usa ese mismo correo en el comando.
+1. En la [web de GoDeporte](https://godeporte.pages.dev), elige **Iniciar sesión → Crear cuenta** y registra el correo de la persona que administrará el complejo. Usa ese mismo correo en el comando.
 2. Desde la raíz del repositorio, con Wrangler autenticado en la cuenta de Cloudflare del proyecto, consulta la cuenta. Reemplaza el correo ficticio por el correo registrado.
 
 ```bash
