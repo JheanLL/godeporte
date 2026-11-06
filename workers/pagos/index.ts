@@ -1,15 +1,14 @@
 import { body, fail, integer, internal, kafkaAuthorization, service, str, type Env, type Payment } from '../shared'
 const app = service('pagos')
 type PagoRow = Omit<Payment, 'aprobado'> & { aprobado: number; publicado: number }
+const paymentEvent = (row: PagoRow): Payment => ({ id: row.id, reserva: row.reserva, aprobado: Boolean(row.aprobado) })
 async function publish(env: Env, row: PagoRow) {
   const headers: Record<string, string> = { 'Content-Type': 'application/vnd.kafka.json.v2+json' }
   const authorization = kafkaAuthorization(env)
   if (authorization) headers.Authorization = authorization
   const response = await fetch(`${env.KAFKA_URL}/topics/${encodeURIComponent(env.KAFKA_TOPIC)}`, {
     method: 'POST', headers, signal: AbortSignal.timeout(5000),
-    body: JSON.stringify({ records: [{ key: row.reserva, value: {
-      id: row.id, reserva: row.reserva, aprobado: Boolean(row.aprobado),
-    } satisfies Payment }] }),
+    body: JSON.stringify({ records: [{ key: row.reserva, value: paymentEvent(row) }] }),
   })
   if (!response.ok) throw new Error('Kafka no disponible')
   const ack = await response.json<{ offsets?: { offset: number; error_code?: number }[] }>()
@@ -30,10 +29,11 @@ app.post('/procesar', async c => {
     c.env.DB.prepare('SELECT * FROM pagos WHERE reserva=?').bind(reserva),
   ])
   const row = lookup.results[0]
-  if (!row.publicado) {
-    await publish(c.env, row).catch(() => console.warn('Evento pendiente de publicación.'))
-  }
-  return c.json({ id: row.id, estado: 'EN_PROCESO' }, 202)
+  const publicado = Boolean(row.publicado) || await publish(c.env, row).then(() => true).catch(() => {
+    console.warn('Evento pendiente de publicación.')
+    return false
+  })
+  return c.json({ id: row.id, estado: 'EN_PROCESO', evento: publicado ? paymentEvent(row) : null }, 202)
 })
 app.post('/reintentar', async c => {
   internal(c)

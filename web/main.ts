@@ -340,12 +340,12 @@ class App {
       this.paying.set(item.id)
       this.status.set(messages.processing)
       try {
-        await this.api('/reservas/' + item.id + '/pagar', 'POST', { aprobado })
+        const result = await this.api<{ reserva: Booking }>('/reservas/' + item.id + '/pagar', 'POST', { aprobado })
         if (this.session() !== actor) return
         sessionStorage.setItem(pendingPaymentKey, item.id)
-        const end = Date.now() + 85_000
+        const end = Date.now() + 8_000
+        let current = result.reserva
         while (this.session() === actor && Date.now() < end) {
-          const current = await this.api<Booking>('/reservas/' + item.id)
           if (this.session() !== actor) return
           this.bookings.update(rows => rows.map(row => row.id === current.id ? current : row))
           if (current.estado !== 'PENDIENTE') {
@@ -353,6 +353,7 @@ class App {
             return
           }
           await delay(1500)
+          if (this.session() === actor) current = await this.api<Booking>('/reservas/' + item.id)
         }
         if (this.session() === actor) this.status.set(messages.processingLater)
       } finally {

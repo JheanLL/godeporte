@@ -122,8 +122,12 @@ app.post('/:id/pagar', async c => {
     method: 'POST', headers: { 'X-Internal-Key': c.env.INTERNAL_SECRET, 'Content-Type': 'application/json' },
     body: JSON.stringify({ reserva: item.id, centimos: item.centimos, aprobado }),
   })
-  if (response.ok) c.executionCtx.waitUntil(drainPayments(c.env).catch(() => console.warn('Kafka se reintentará en el cron.')))
-  return response
+  if (!response.ok) return response
+  const { id, evento } = await response.json<{ id: string; evento: Payment | null }>()
+  if (evento?.reserva === item.id) await applyPayment(c.env, evento)
+  c.executionCtx.waitUntil(dispatch(c.env).catch(() => console.warn('Aviso pendiente de publicación.')))
+  c.executionCtx.waitUntil(drainPayments(c.env).catch(() => console.warn('Kafka se reintentará en el cron.')))
+  return c.json({ id, reserva: await booking(c.env, item.id) }, 202)
 })
 
 app.post('/:id/cancelar', async c => {
@@ -163,14 +167,15 @@ async function applyPayment(env: Env, payment: Payment) {
   const result = await env.DB.prepare(`UPDATE reservas SET estado=?, pago=? WHERE id=?
     AND estado='PENDIENTE' AND vence>unixepoch()`).bind(estado, id, reserva).run()
   if (result.meta.changes) await unlock(env, item)
-  await dispatch(env)
   return Boolean(result.meta.changes)
 }
 
 app.post('/eventos/pago', async c => {
   internal(c)
   const data = await body(c)
-  return c.json({ aplicado: await applyPayment(c.env, data as Payment) })
+  const aplicado = await applyPayment(c.env, data as Payment)
+  await dispatch(c.env)
+  return c.json({ aplicado })
 })
 
 async function drainPayments(env: Env) {
@@ -183,6 +188,7 @@ async function drainPayments(env: Env) {
   if (!lease.meta.changes) return
   try {
     await consume(env, authorization, async event => { await applyPayment(env, event) })
+    await dispatch(env)
   } finally {
     await env.DB.prepare('DELETE FROM consumidor_kafka WHERE id=1 AND owner=?').bind(owner).run()
   }

@@ -80,10 +80,11 @@ test('cinco servicios, Redis, Kafka, D1, cola y QR', { timeout: 150000 }, async 
   assert.ok(mine.every(row => row.usuario === own.usuario))
   assert.ok((await bookings(admin)).some(row => row.id === item.id))
   await post(`/reservas/${own.id}/pagar`, { aprobado: true }, admin, 202)
-  await until(async () => (await call('/reservas/?mias=1', { token: admin })).find(row => row.id === own.id)?.estado === 'CONFIRMADA')
+  assert.equal((await call('/reservas/?mias=1', { token: admin })).find(row => row.id === own.id)?.estado, 'CONFIRMADA')
   await post('/reservas/eventos/pago', { reserva: item.id, id: randomUUID(), aprobado: true }, token, 403)
 
   const payment = await post(`/reservas/${item.id}/pagar`, { aprobado: true }, token, 202)
+  assert.equal(payment.reserva.estado, 'CONFIRMADA')
   await until(async () => (await bookings(token)).find(row => row.id === item.id)?.estado === 'CONFIRMADA')
   const receipt = await until(async () => {
     const response = await fetch(api + '/notificaciones/comprobante/' + item.id, {

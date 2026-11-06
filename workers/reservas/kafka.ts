@@ -1,7 +1,15 @@
 import type { Env, Payment } from '../shared'
 
-type KafkaRecord = { topic: string; partition: number; offset: number; value: Payment }
+type KafkaRecord = { topic: string; partition: number; offset: number; value: unknown }
 const mediaType = 'application/vnd.kafka.v2+json'
+
+function isPayment(value: unknown): value is Payment {
+  if (!value || typeof value !== 'object') return false
+  const event = value as Partial<Payment>
+  return typeof event.id === 'string' && !!event.id.trim() && event.id.length <= 64 &&
+    typeof event.reserva === 'string' && !!event.reserva.trim() && event.reserva.length <= 64 &&
+    typeof event.aprobado === 'boolean'
+}
 
 export async function consume(env: Env, authorization: string, apply: (payment: Payment) => Promise<void>) {
   const root = env.KAFKA_URL.replace(/\/$/, '')
@@ -24,7 +32,8 @@ export async function consume(env: Env, authorization: string, apply: (payment: 
       'application/vnd.kafka.json.v2+json')
     const offsets = new Map<number, { topic: string; partition: number; offset: number }>()
     for (const record of await response.json<KafkaRecord[]>()) {
-      await apply(record.value)
+      if (isPayment(record.value)) await apply(record.value)
+      else console.warn('Evento Kafka ajeno al flujo de pagos omitido.')
       offsets.set(record.partition, { topic: record.topic, partition: record.partition, offset: record.offset + 1 })
     }
     if (offsets.size) await call(instance + '/offsets', 'POST', { offsets: [...offsets.values()] })
