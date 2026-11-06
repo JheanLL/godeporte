@@ -50,7 +50,10 @@ Pulsa **Create topic** y verifica que `godeporte-pagos` aparezca en **Topics**.
 ### 3.3 Conectar Kafka REST con Cloudflare
 
 1. **Activa el proxy en Aiven.** En el servicio Kafka abre **Service settings → Service management → Actions (…) → Enable REST API (Karapace)** y confirma con **Enable**. Si ya está activo, continúa. [Activar el REST Proxy](https://aiven.io/docs/products/kafka/karapace/howto/enable-karapace).
-2. **Guarda la URL en Cloudflare.** En Aiven abre **Overview → Connection information → Apache Kafka REST** y copia la URL HTTPS con su puerto si aparece. En [Cloudflare](https://dash.cloudflare.com/), abre **Workers & Pages → godeporte-academico-pagos → Settings → Variables and Secrets → Add**. Selecciona **Text**, escribe `KAFKA_URL` como nombre, pega la URL como valor y pulsa **Deploy**. Repite en **godeporte-academico-reservas**.
+2. **Guarda la URL en Cloudflare.** Si Aiven muestra **Produce a message**, toma la dirección del comando `curl`. De `https://USUARIO:CONTRASEÑA@kafka.example.test:13189/topics/godeporte-pagos` conserva solo `https://kafka.example.test:13189`, con el host y puerto de tu servicio. `KAFKA_URL` es el nombre que usa GoDeporte en Cloudflare. `base_uri` pertenece al ejemplo del consumidor. GoDeporte crea su propio consumidor y agrega las rutas del tema y del grupo. [Ejemplos de Kafka REST en Aiven](https://aiven.io/docs/products/kafka/howto/connect-with-kafka-rest).
+
+   En [Cloudflare](https://dash.cloudflare.com/), abre **Workers & Pages → godeporte-academico-pagos → Settings → Variables and Secrets → Add**. Selecciona **Text**, escribe `KAFKA_URL`, pega el valor del paso anterior y pulsa **Deploy**. Repite en **godeporte-academico-reservas**.
+
 3. **Guarda la autenticación en ambos Workers.** En Aiven, abre **Users** y elige un usuario del servicio. En una terminal Bash desde el repositorio, con Wrangler autenticado en la cuenta académica, ejecuta el bloque de abajo e introduce el nombre y la contraseña de ese usuario cuando se pidan. El bloque configura `KAFKA_AUTH` en ambos Workers. Si el REST Proxy aplica ACL, el usuario debe poder publicar y consumir en `godeporte-pagos` y usar el grupo `godeporte-academico-reservas`. [Usuarios del servicio](https://aiven.io/docs/products/kafka/howto/add-manage-service-users).
 
 ```bash
