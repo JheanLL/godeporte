@@ -49,9 +49,11 @@ Pulsa **Create topic** y verifica que `godeporte-pagos` aparezca en **Topics**.
 
 ### 3.3 Activar Kafka REST y localizar la conexión
 
-1. Dentro del servicio Kafka abre **Overview → Connection information → Apache Kafka REST**. Si aparece **Enable REST Proxy**, actívalo y espera a que la pestaña muestre los datos de conexión.
-2. En **Overview → Set up your stream → Quick connect**, selecciona **Kafka REST** y el tema `godeporte-pagos`. En el paso de autenticación selecciona un **service user**. Si el servicio usa ACL, comprueba que ese usuario pueda producir y consumir en el tema y usar el grupo `godeporte-academico-reservas`.
-3. Identifica el origen HTTPS de Kafka REST, incluido el puerto si figura. Si lo encuentras en un comando generado, toma solo `https://HOST:PUERTO`, antes de `/topics/...`. El host/puerto TCP del broker y el endpoint de Schema Registry son conexiones distintas. [Quick connect de Kafka REST](https://aiven.io/docs/products/kafka/howto/connect-with-kafka-rest).
+1. En el servicio Kafka, abre **Service settings → Service management → Actions (…) → Enable REST API (Karapace)** y confirma con **Enable**. Si el proxy ya está activo, pasa al paso 2. [Activar el REST Proxy](https://aiven.io/docs/products/kafka/karapace/howto/enable-karapace).
+2. Vuelve a **Overview → Connection information → Apache Kafka REST**. Toma el origen HTTPS, incluido el puerto si aparece. Ese valor va en `KAFKA_URL` en el paso 3.4.
+3. En **Users**, elige un usuario del servicio y usa su nombre y contraseña para el paso 3.4. Si está habilitada la autorización del REST Proxy, comprueba que el usuario pueda publicar y consumir en `godeporte-pagos` y usar el grupo `godeporte-academico-reservas`. [Usuarios del servicio](https://aiven.io/docs/products/kafka/howto/add-manage-service-users).
+
+Si la pantalla muestra **SASL/SCRAM** y **Client certificate**, estás en la conexión directa al broker. Vuelve a **Service settings** y sigue el paso 1.
 
 ### 3.4 Guardar la conexión en los dos Workers
 
