@@ -23,10 +23,4 @@ jobs:
         with:
           node-version: '24'
       - run: pnpm install --frozen-lockfile
-      - run: bash scripts/migrate.sh --remote
-      - run: pnpm check && pnpm build
-      - run: |
-          for service in auth canchas pagos reservas notificaciones gateway; do
-            pnpm exec wrangler deploy -c ".local/$service.json"
-          done
-      - run: pnpm exec wrangler pages deploy dist/godeporte/browser --project-name godeporte-academico --branch main
+      - run: node scripts/cloudflare.mjs deploy

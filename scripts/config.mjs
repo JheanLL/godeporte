@@ -35,6 +35,7 @@ for (const [index, service] of services.entries()) {
     config.queues = { producers: [{ binding: 'AVISOS', queue: 'godeporte-academico-avisos' }] }
     config.triggers = { crons: ['* * * * *'] }
   }
+  if (!local && (service === 'pagos' || service === 'reservas')) vars.KAFKA_TOPIC = 'godeporte-pagos'
   if (service === 'pagos') config.triggers = { crons: ['* * * * *'] }
   if (service === 'notificaciones') {
     config.services = ['reservas'].map(binding)
@@ -42,9 +43,4 @@ for (const [index, service] of services.entries()) {
       max_retries: 5, dead_letter_queue: 'godeporte-academico-avisos-fallidos' }] }
   }
   writeFileSync(`.local/${service}.json`, JSON.stringify(config, null, 2))
-}
-if (!local) {
-  const api = process.env.GATEWAY_URL
-  if (!api?.startsWith('https://')) throw new Error('Configura GATEWAY_URL.')
-  writeFileSync('web/config.json', JSON.stringify({ api: api.replace(/\/$/, '') + '/api' }))
 }
