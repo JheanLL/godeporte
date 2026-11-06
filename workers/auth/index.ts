@@ -1,5 +1,5 @@
 import { SignJWT } from 'jose'
-import { body, fail, key, service, str } from '../shared'
+import { body, fail, key, service, str, user } from '../shared'
 
 const app = service('auth')
 const subtle = crypto.subtle as SubtleCrypto & { timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean }
@@ -42,5 +42,15 @@ app.post('/login', async c => {
     .setSubject(row.id).setIssuer('godeporte-academico').setAudience('godeporte')
     .setIssuedAt().setExpirationTime('2h').sign(key(c.env))
   return c.json({ token, nombre: row.nombre, role: row.role })
+})
+app.post('/nombres', async c => {
+  await user(c, true)
+  const { ids } = await body(c)
+  if (!Array.isArray(ids) || ids.length > 200 || ids.some(id => typeof id !== 'string' || id.length > 64)) {
+    fail(400, 'Lista de usuarios inválida.')
+  }
+  const rows = await c.env.DB.prepare('SELECT id, nombre FROM usuarios WHERE id IN (SELECT value FROM json_each(?))')
+    .bind(JSON.stringify(ids)).all<{ id: string; nombre: string }>()
+  return c.json(Object.fromEntries(rows.results.map(row => [row.id, row.nombre])))
 })
 export default app

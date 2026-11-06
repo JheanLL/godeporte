@@ -104,6 +104,13 @@ app.post('/', async c => {
   return c.json(await booking(c.env, id), 201)
 })
 
+app.get('/:id', async c => {
+  const actor = await user(c)
+  const item = await booking(c.env, c.req.param('id'))
+  if (!item || (item.usuario !== actor.id && actor.role !== 'admin')) fail(404, 'Reserva no encontrada.')
+  return c.json(effective(item))
+})
+
 app.post('/:id/pagar', async c => {
   const actor = await user(c)
   const item = await booking(c.env, c.req.param('id'))
@@ -111,10 +118,12 @@ app.post('/:id/pagar', async c => {
   if (effective(item).estado !== 'PENDIENTE') fail(409, 'La reserva ya no está pendiente.')
   const { aprobado } = await body(c)
   if (typeof aprobado !== 'boolean') fail(400, 'Indica el resultado de la simulación.')
-  return c.env.PAGOS.fetch('https://pagos/procesar', {
+  const response = await c.env.PAGOS.fetch('https://pagos/procesar', {
     method: 'POST', headers: { 'X-Internal-Key': c.env.INTERNAL_SECRET, 'Content-Type': 'application/json' },
     body: JSON.stringify({ reserva: item.id, centimos: item.centimos, aprobado }),
   })
+  if (response.ok) c.executionCtx.waitUntil(drainPayments(c.env).catch(() => console.warn('Kafka se reintentará en el cron.')))
+  return response
 })
 
 app.post('/:id/cancelar', async c => {
@@ -138,9 +147,10 @@ app.get('/interno/:id', async c => {
 app.post('/interno/:id/ingreso', async c => {
   internal(c)
   const result = await c.env.DB.prepare(`UPDATE reservas SET ingreso=unixepoch()
-    WHERE id=? AND estado='CONFIRMADA' AND ingreso IS NULL`).bind(c.req.param('id')).run()
-  if (!result.meta.changes) fail(409, 'La reserva no admite otro ingreso.')
-  return c.json({ registrado: true })
+    WHERE id=? AND estado='CONFIRMADA' AND ingreso IS NULL
+    RETURNING cancha, fecha, hora, usuario`).bind(c.req.param('id')).first()
+  if (!result) fail(409, 'La reserva no admite otro ingreso.')
+  return c.json({ registrado: true, ...result })
 })
 
 async function applyPayment(env: Env, payment: Payment) {
@@ -163,12 +173,26 @@ app.post('/eventos/pago', async c => {
   return c.json({ aplicado: await applyPayment(c.env, data as Payment) })
 })
 
+async function drainPayments(env: Env) {
+  const authorization = kafkaAuthorization(env)
+  if (!authorization) return
+  const owner = crypto.randomUUID()
+  const lease = await env.DB.prepare(`INSERT INTO consumidor_kafka VALUES (1,?,unixepoch()+180)
+    ON CONFLICT(id) DO UPDATE SET owner=excluded.owner, vence=excluded.vence
+    WHERE consumidor_kafka.vence<=unixepoch()`).bind(owner).run()
+  if (!lease.meta.changes) return
+  try {
+    await consume(env, authorization, async event => { await applyPayment(env, event) })
+  } finally {
+    await env.DB.prepare('DELETE FROM consumidor_kafka WHERE id=1 AND owner=?').bind(owner).run()
+  }
+}
+
 export default {
   fetch: app.fetch,
   async scheduled(_event: ScheduledController, env: Env) {
     await expire(env)
     await dispatch(env)
-    const authorization = kafkaAuthorization(env)
-    if (authorization) await consume(env, authorization, async event => { await applyPayment(env, event) })
+    await drainPayments(env)
   },
 }

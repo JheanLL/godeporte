@@ -126,6 +126,6 @@ UPDATE usuarios SET role = 'admin' WHERE email = 'correo-del-administrador@examp
 
 Sal de la aplicación y vuelve a entrar para renovar el JWT. El menú debe mostrar **Dashboard** y **Administrar**.
 
-Desde la raíz del repositorio, ejecuta `node scripts/cloudflare.mjs health` y comprueba que todas las rutas devuelvan `OK`. En Pages, reserva una cancha y simula una aprobación. Actualiza el historial hasta que la reserva aparezca confirmada y abre el QR. Con la cuenta de administrador, valida el código en **Administrar**. Repite con un rechazo y comprueba que el horario se libera.
+Desde la raíz del repositorio, ejecuta `node scripts/cloudflare.mjs health` y comprueba que todas las rutas devuelvan `OK`. En Pages, reserva una cancha y simula una aprobación. Espera a que la reserva se confirme y aparezca el QR en **Mis reservas**. Con un teléfono, escanea el QR y abre el enlace de GoDeporte. Inicia sesión como administrador si hace falta y pulsa **Registrar ingreso**. Repite con un rechazo y comprueba que el horario se libera.
 
 Si un pago sigue en proceso, revisa los logs de Pagos y Reservas. Un `401` de Aiven apunta al encabezado Basic Auth. Un `403` apunta a permisos del usuario o ACL. Si se confirma la reserva pero no aparece el QR, revisa la cola `godeporte-academico-avisos` y su cola de fallos en Cloudflare.

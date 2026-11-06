@@ -12,7 +12,9 @@ app.get('/comprobante/:id', async c => {
   if (!status.ok) fail(503, 'No se pudo comprobar la reserva.')
   const { estado, ingreso } = await status.json<{ estado: string; ingreso: number | null }>()
   if (estado !== 'CONFIRMADA') fail(409, 'La reserva no está confirmada.')
-  return c.json({ codigo: row.codigo, usado: ingreso !== null, qr: 'data:image/svg+xml;base64,' + btoa(await QRCode.toString(row.codigo, { type: 'svg' })) })
+  const entryUrl = new URL(c.env.WEB_ORIGIN)
+  entryUrl.hash = new URLSearchParams({ ingreso: row.codigo }).toString()
+  return c.json({ codigo: row.codigo, usado: ingreso !== null, qr: 'data:image/svg+xml;base64,' + btoa(await QRCode.toString(entryUrl.href, { type: 'svg' })) })
 })
 app.post('/validar/:codigo', async c => {
   await user(c, true)
@@ -24,7 +26,7 @@ app.post('/validar/:codigo', async c => {
   })
   if (response.status === 409) fail(409, 'Código ya utilizado o reserva cancelada.')
   if (!response.ok) fail(503, 'No se pudo comprobar la reserva.')
-  return c.json({ reserva: row.reserva })
+  return c.json({ reserva: row.reserva, ...await response.json<Record<string, unknown>>() })
 })
 export default {
   fetch: app.fetch,

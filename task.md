@@ -4,5 +4,7 @@
 - Hecho: Angular, Gateway, cinco Workers y bases D1, Redis, Kafka y cola de comprobantes. Flujo de integración local verificado con Apache Kafka y Redis reales.
 - Base y rama: FastAPI 698c2c0, rama local codex/academico en academico-trabajo.
 - Nube: Pages y los seis Workers desplegados con Wrangler. Bases D1, colas y rutas de estado verificadas.
-- Siguiente: conectar Aiven y Upstash, hacer la demostración pública y habilitar el token del entorno de GitHub si se usará el despliegue desde Actions.
+- Nube: secretos de Aiven y Upstash registrados. El usuario observó una confirmación de pago con demora.
+- En la rama local: nueva interfaz, sesión al recargar, seguimiento de pagos y validación del ingreso desde el enlace QR.
+- Siguiente: publicar y desplegar la actualización cuando se autorice. Aplicar el esquema de Reservas antes de desplegar los Workers.
 - Pendiente independiente: GoDeporte Comercial en repositorio privado, con Yape manual y Culqi opcional.

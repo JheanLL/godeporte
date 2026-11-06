@@ -1,12 +1,13 @@
 <header>
   <div class="bar">
-    <button class="brand" (click)="open('canchas')" i18n>GoDeporte <small>Académico</small></button>
+    <button class="brand" (click)="open('canchas')" i18n>GoDeporte</button>
     <nav aria-label="Navegación principal" i18n-aria-label>
       <button (click)="open('canchas')" i18n>Canchas</button>
       @if (session(); as account) {
         <button (click)="open('reservas')">{{ account.role === 'admin' ? copy.dashboard : copy.bookings }}</button>
         @if (account.role === 'admin') {
           <button (click)="open('admin')" i18n>Administrar</button>
+          <button (click)="open('ingreso')" i18n>Validar ingreso</button>
         }
         <button (click)="logout()" i18n>Salir</button>
       } @else {
@@ -16,17 +17,18 @@
   </div>
 </header>
 <main>
-  @if (status()) { <p class="status" role="status">{{ status() }}</p> }
+  @if (status()) { <p class="status" role="status">@if (paying()) { <span class="spinner" aria-hidden="true"></span> } {{ status() }}</p> }
   @switch (tab()) {
     @case ('canchas') {
       <section class="intro">
-        <p class="eyebrow" i18n>TALLER DE DESARROLLO · PUCALLPA</p>
+        <p class="eyebrow" i18n>RESERVAS DEPORTIVAS · PUCALLPA</p>
         <h1 i18n>Encuentra tu próxima cancha</h1>
-        <p i18n>Elige una cancha, consulta sus horarios y prueba el flujo de reserva con un pago simulado.</p>
+        <p i18n>Encuentra un horario disponible y reserva tu cancha en minutos.</p>
       </section>
       <section class="grid" aria-label="Catálogo" i18n-aria-label>
         @for (court of courts(); track court.id) {
-          <article>
+          <article class="court-card">
+            <div class="court-art" aria-hidden="true"><span></span></div>
             <p class="eyebrow">{{ court.ubicacion }}</p>
             <h2>{{ court.nombre }}</h2>
             <p>{{ court.caracteristicas }}</p>
@@ -38,7 +40,7 @@
       @if (selected(); as court) {
         <section class="panel">
           <h2 i18n>Horarios · {{ court.nombre }}</h2>
-          <label i18n>Fecha <input type="date" [min]="today" [value]="date()" #day (change)="day.value && choose(court, day.value)"></label>
+          <label i18n>Fecha <input type="date" [min]="today" [value]="date()" [disabled]="busy()" #day (change)="day.value && choose(court, day.value)"></label>
           <div class="slots">
             @for (slot of slots(); track slot.hora) {
               <button [disabled]="busy() || !slot.libre" (click)="reserve(slot.hora)">{{ time(slot.hora) }}</button>
@@ -74,12 +76,12 @@
       @if (session()?.role === 'admin') {
         <p i18n>{{ count('CONFIRMADA') }} confirmadas · {{ count('PENDIENTE') }} pendientes · {{ count('CANCELADA') }} canceladas</p>
       }
-      <button (click)="open('reservas')" [disabled]="busy()" i18n>Actualizar historial</button>
       <section class="grid">
         @for (item of bookings(); track item.id) {
           <article>
-            <p class="eyebrow">{{ item.estado }}</p>
+            <p class="badge" [class.confirmed]="item.estado === 'CONFIRMADA'">{{ item.estado }}</p>
             <h2>{{ courtName(item.cancha) }}</h2>
+            @if (customerName(item.usuario); as name) { <p i18n>Reserva de <strong>{{ name }}</strong></p> }
             <p>{{ item.fecha }} · {{ time(item.hora) }} · {{ price(item.centimos) }}</p>
             <div class="actions">
               @if (item.estado === 'PENDIENTE' && session()?.role === 'cliente') {
@@ -103,7 +105,9 @@
         <section class="panel">
           <h2 i18n>QR de acceso</h2>
           <img [src]="proof.qr" alt="Código QR de acceso" i18n-alt>
-          <p><code>{{ proof.codigo }}</code></p>
+          <p><strong>{{ courtName(proof.booking.cancha) }}</strong> · {{ proof.booking.fecha }} · {{ time(proof.booking.hora) }}</p>
+          @if (customerName(proof.booking.usuario); as name) { <p i18n>Reserva de <strong>{{ name }}</strong></p> }
+          <p i18n>Muestra este QR al personal en la entrada.</p>
           @if (proof.usado) { <p i18n>Ingreso registrado.</p> }
         </section>
       }
@@ -128,13 +132,22 @@
           <button class="primary" [disabled]="busy()" i18n>Guardar cancha</button>
         </form>
       </section>
-      <section class="panel form">
-        <h2 i18n>Validar ingreso</h2>
-        <form (submit)="$event.preventDefault(); validate(code.value)">
-          <label i18n>Código del QR <input #code required></label>
-          <button class="primary" [disabled]="busy()" i18n>Validar código</button>
-        </form>
-      </section>
+    }
+    @case ('ingreso') {
+      @if (session()?.role === 'admin') {
+        <section class="panel form">
+          <h1 i18n>Validar ingreso</h1>
+          <p i18n>Escanea el QR del cliente con la cámara de tu teléfono y abre el enlace. También puedes pegar el enlace aquí.</p>
+          <form (submit)="$event.preventDefault(); validate(code.value)">
+            <label i18n>Enlace o código del QR <input #code [value]="checkInCode()" required></label>
+            <button class="primary" [disabled]="busy()" i18n>Registrar ingreso</button>
+          </form>
+          @if (entry(); as checked) {
+            <p><strong>{{ courtName(checked.cancha) }}</strong> · {{ checked.fecha }} · {{ time(checked.hora) }}</p>
+            @if (customerName(checked.usuario); as name) { <p i18n>Reserva de <strong>{{ name }}</strong></p> }
+          }
+        </section>
+      }
     }
   }
 </main>

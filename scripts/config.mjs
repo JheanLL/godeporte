@@ -38,6 +38,7 @@ for (const [index, service] of services.entries()) {
   if (!local && (service === 'pagos' || service === 'reservas')) vars.KAFKA_TOPIC = 'godeporte-pagos'
   if (service === 'pagos') config.triggers = { crons: ['* * * * *'] }
   if (service === 'notificaciones') {
+    vars.WEB_ORIGIN = webOrigin
     config.services = ['reservas'].map(binding)
     config.queues = { consumers: [{ queue: 'godeporte-academico-avisos', max_batch_timeout: 1,
       max_retries: 5, dead_letter_queue: 'godeporte-academico-avisos-fallidos' }] }

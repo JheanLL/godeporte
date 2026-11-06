@@ -12,3 +12,6 @@ CREATE TABLE IF NOT EXISTS avisos_pendientes (reserva TEXT PRIMARY KEY, usuario 
 CREATE TRIGGER IF NOT EXISTS aviso_al_confirmar AFTER UPDATE OF estado ON reservas
   WHEN NEW.estado='CONFIRMADA' AND OLD.estado='PENDIENTE'
   BEGIN INSERT INTO avisos_pendientes VALUES (NEW.id, NEW.usuario); END;
+CREATE TABLE IF NOT EXISTS consumidor_kafka (
+  id INTEGER PRIMARY KEY CHECK (id=1), owner TEXT NOT NULL, vence INTEGER NOT NULL
+);

@@ -54,6 +54,26 @@ paths:
                   nombre: {type: string}
                   role: {type: string, enum: [cliente, admin]}
         '401': {description: Credenciales inválidas}
+  /auth/nombres:
+    post:
+      summary: Consultar nombres de clientes como administrador
+      security: [{bearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids: {type: array, maxItems: 200, items: {type: string}}
+      responses:
+        '200':
+          description: Nombres por identificador de usuario
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: {type: string}}
+        '403': {description: Rol insuficiente}
   /canchas/:
     get:
       summary: Consultar catálogo
@@ -134,6 +154,19 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/Reserva'}
         '409': {description: Horario ocupado}
+  /reservas/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      summary: Consultar una reserva propia o consultarla como administrador
+      security: [{bearer: []}]
+      responses:
+        '200':
+          description: Estado actual de la reserva
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Reserva'}
+        '404': {description: Reserva no encontrada o inaccesible}
   /reservas/{id}/pagar:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -177,7 +210,7 @@ paths:
                 required: [codigo, qr, usado]
                 properties:
                   codigo: {type: string, format: uuid}
-                  qr: {type: string, description: URL de datos SVG}
+                  qr: {type: string, description: Imagen SVG que codifica el enlace de validación en GoDeporte}
                   usado: {type: boolean}
         '404': {description: Comprobante aún no disponible o inaccesible}
         '409': {description: Reserva cancelada}
@@ -188,7 +221,19 @@ paths:
       parameters:
         - {name: codigo, in: path, required: true, schema: {type: string, format: uuid}}
       responses:
-        '200': {description: Ingreso registrado}
+        '200':
+          description: Ingreso registrado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Horario'
+                  - type: object
+                    required: [reserva, usuario, registrado]
+                    properties:
+                      reserva: {type: string, format: uuid}
+                      usuario: {type: string, format: uuid}
+                      registrado: {type: boolean}
         '403': {description: Rol insuficiente}
         '404': {description: Código desconocido}
         '409': {description: Código utilizado o reserva cancelada}

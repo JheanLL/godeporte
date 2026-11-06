@@ -31,7 +31,7 @@ app.post('/procesar', async c => {
   ])
   const row = lookup.results[0]
   if (!row.publicado) {
-    c.executionCtx.waitUntil(publish(c.env, row).catch(() => console.warn('Evento pendiente de publicación.')))
+    await publish(c.env, row).catch(() => console.warn('Evento pendiente de publicación.'))
   }
   return c.json({ id: row.id, estado: 'EN_PROCESO' }, 202)
 })

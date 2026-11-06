@@ -20,7 +20,7 @@ pnpm dev:infra
 pnpm dev
 ```
 
-Abre [GoDeporte en localhost](http://localhost:3000), crea una cuenta, elige una cancha y simula un pago. Actualiza el historial hasta ver la reserva confirmada y abre el QR. El administrador local usa el correo `admin@example.test` y la contraseña ficticia `demostracion-local-2026`. En **Administrar** se puede validar el texto del QR.
+Abre [GoDeporte en localhost](http://localhost:3000), crea una cuenta, elige una cancha y simula un pago. Espera la confirmación y el QR en el historial. El administrador local usa el correo `admin@example.test` y la contraseña ficticia `demostracion-local-2026`. El QR abre la pantalla **Validar ingreso**. Para una prueba local, abre el enlace en el mismo equipo y pulsa **Registrar ingreso** con la cuenta administradora.
 
 ## Verificación
 
