@@ -115,17 +115,45 @@ node scripts/cloudflare.mjs github
 2. En **GitHub → Settings → Environments → academico → Environment secrets**, crea `CLOUDFLARE_API_TOKEN` directamente en el formulario.
 3. Desde la raíz del repositorio ejecuta `gh workflow run deploy.yml --ref main`. Sigue la ejecución en **Actions → Desplegar GoDeporte Académico**.
 
-## 6. Administrador y demostración
+## 6. Cuentas de administrador y validación del QR
 
-Registra tu cuenta desde Pages. En Cloudflare abre **Workers & Pages → D1 → godeporte-academico-auth → Console**. Comprueba que el correo corresponde a la cuenta que acabas de registrar y actualiza el rol.
+### 6.1 Dar o quitar el rol de administrador
 
-```sql
-SELECT id, email, role FROM usuarios WHERE email = 'correo-del-administrador@example.test';
-UPDATE usuarios SET role = 'admin' WHERE email = 'correo-del-administrador@example.test';
+1. En la [web de GoDeporte](https://godeporte-academico.pages.dev), elige **Iniciar sesión → Crear cuenta** y registra el correo de la persona que administrará el complejo. Usa ese mismo correo en el comando.
+2. Desde la raíz del repositorio, con Wrangler autenticado en la cuenta de Cloudflare del proyecto, consulta la cuenta. Reemplaza el correo ficticio por el correo registrado.
+
+```bash
+pnpm exec wrangler d1 execute godeporte-academico-auth --remote \
+  --command "SELECT email, role FROM usuarios WHERE email = 'persona@example.test';"
 ```
 
-Sal de la aplicación y vuelve a entrar para renovar el JWT. El menú debe mostrar **Dashboard** y **Administrar**.
+3. Si la consulta devuelve la cuenta correcta, asígnale el rol.
 
-Desde la raíz del repositorio, ejecuta `node scripts/cloudflare.mjs health` y comprueba que todas las rutas devuelvan `OK`. En Pages, reserva una cancha y simula una aprobación. Espera a que la reserva se confirme y aparezca el QR en **Mis reservas**. Con un teléfono, escanea el QR y abre el enlace de GoDeporte. Inicia sesión como administrador si hace falta y pulsa **Registrar ingreso**. Repite con un rechazo y comprueba que el horario se libera.
+```bash
+pnpm exec wrangler d1 execute godeporte-academico-auth --remote \
+  --command "UPDATE usuarios SET role = 'admin' WHERE email = 'persona@example.test' RETURNING email, role;"
+```
+
+El comando debe devolver el correo con rol `admin`. La persona debe cerrar sesión y volver a entrar. El menú mostrará **Dashboard**, **Administrar** y **Validar ingreso**.
+
+Para quitarle el acceso administrativo, devuelve la cuenta al rol de cliente. Así conserva sus reservas.
+
+```bash
+pnpm exec wrangler d1 execute godeporte-academico-auth --remote \
+  --command "UPDATE usuarios SET role = 'cliente' WHERE email = 'persona@example.test' RETURNING email, role;"
+```
+
+Las sesiones emitidas antes del cambio conservan el rol anterior hasta cerrar sesión o hasta que venza su token, como máximo dos horas desde que se emitió. También puedes ejecutar las mismas consultas SQL desde **Cloudflare → Workers & Pages → D1 → godeporte-academico-auth → Console**.
+
+### 6.2 Validar una entrada
+
+1. El cliente abre **Mis reservas** en GoDeporte y muestra el QR de una reserva confirmada.
+2. En el teléfono del administrador, abre la aplicación **Cámara**, apunta al QR y toca el enlace detectado. El enlace abre **Validar ingreso** dentro de la misma web de GoDeporte, con el código cargado.
+3. Si el teléfono no tiene una sesión de administrador, inicia sesión con la cuenta del paso 6.1. GoDeporte vuelve a **Validar ingreso**. Si el lector del teléfono solo permite copiar el enlace, abre **Validar ingreso** desde el menú de GoDeporte y pégalo en el formulario.
+4. Pulsa **Registrar ingreso**. GoDeporte verifica que la reserva esté confirmada y el QR siga disponible. La pantalla muestra **Ingreso registrado**, el nombre del cliente, la cancha, la fecha y la hora. Un segundo intento con ese QR se rechaza.
+
+### 6.3 Comprobar el despliegue
+
+Desde la raíz del repositorio, ejecuta `node scripts/cloudflare.mjs health` y comprueba que todas las rutas devuelvan `OK`. En Pages, reserva una cancha y simula una aprobación. Espera a que se confirme y aparezca el QR en **Mis reservas**. Valídalo con el paso 6.2. En otra reserva, simula un rechazo y comprueba que el horario se libera.
 
 Si un pago sigue en proceso, revisa los logs de Pagos y Reservas. Un `401` de Aiven apunta al encabezado Basic Auth. Un `403` apunta a permisos del usuario o ACL. Si se confirma la reserva pero no aparece el QR, revisa la cola `godeporte-academico-avisos` y su cola de fallos en Cloudflare.
