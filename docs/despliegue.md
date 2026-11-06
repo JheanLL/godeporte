@@ -41,31 +41,11 @@ Antes de continuar, revisa las URLs de Pages y del Gateway en `.local/cloudflare
 
 ### 3.2 Crear el tema `godeporte-pagos`
 
-Entra al **servicio Kafka**, luego a **Manage stream → Topics → Create topic**. Completa los campos así:
+En el servicio Kafka, abre **Manage stream → Topics → Create topic**. Escribe `godeporte-pagos` en **Topic name**.
 
-| Campo | Valor |
-| --- | --- |
-| **Topic** o **Topic name** | `godeporte-pagos` |
-| **Topic type**, si aparece | **Classic** |
-| **Partitions**, si aparece | `2` |
-| **Replication factor**, si aparece | `1` |
-| **Min in-sync replicas**, si aparece | `1` |
-| **Cleanup policy**, si aparece | `delete` |
-| **Retention** y opciones de almacenamiento | Conserva lo que fija el plan **Free**. No habilites almacenamiento por niveles. |
+Si aparecen los campos avanzados, usa **Classic** como tipo, **2** particiones, **1** réplica, **1** réplica mínima en sincronía y **delete** como política de limpieza. Conserva la retención del plan gratuito.
 
-Si solo aparece el nombre, escríbelo y pulsa **Create topic**. Los campos ocultos los administra Aiven. Al terminar, comprueba que `godeporte-pagos` aparece en **Topics**. El nombre se escribe como texto, en minúsculas y con guion. El formulario no requiere un esquema, un archivo JSON ni un mensaje de prueba. [Creación de temas](https://aiven.io/docs/products/kafka/howto/create-topic).
-
-GoDeporte publica después un mensaje **JSON**, con el ID de reserva como clave de Kafka. El valor tiene esta forma ficticia:
-
-```json
-{
-  "id": "11111111-1111-4111-8111-111111111111",
-  "reserva": "22222222-2222-4222-8222-222222222222",
-  "aprobado": true
-}
-```
-
-`aprobado` es un booleano. En la demostración, el Worker de Pagos genera el evento y el de Reservas lo consume.
+Pulsa **Create topic** y verifica que `godeporte-pagos` aparezca en **Topics**.
 
 ### 3.3 Activar Kafka REST y localizar la conexión
 
