@@ -21,7 +21,7 @@ done
 pnpm dev:infra > .local/infra.log 2>&1 &
 infra_pid=$!
 for i in {1..45}; do
-  if rg -q 'Puente local' .local/infra.log; then break; fi
+  if curl -fsS http://127.0.0.1:8788/health >/dev/null 2>&1; then break; fi
   if ! kill -0 "$infra_pid" 2>/dev/null || [[ "$i" == 45 ]]; then cat .local/infra.log; exit 1; fi
   sleep 1
 done

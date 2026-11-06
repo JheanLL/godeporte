@@ -39,6 +39,10 @@ await consumer.run({
 
 const server = createServer(async (request, response) => {
   response.setHeader('Content-Type', 'application/json')
+  if (request.method === 'GET' && request.url === '/health') {
+    response.end(JSON.stringify({ ok: true }))
+    return
+  }
   try {
     if (request.method !== 'POST') {
       response.writeHead(405).end('{}')

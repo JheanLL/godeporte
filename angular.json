@@ -12,6 +12,7 @@
           "builder": "@angular/build:application",
           "options": {
             "browser": "web/main.ts", "index": "web/index.html", "tsConfig": "web/tsconfig.json",
+            "polyfills": ["@angular/localize/init"],
             "outputPath": "dist/godeporte", "assets": [{"glob": "config.json", "input": "web", "output": "/"}],
             "styles": ["web/style.css"], "optimization": true
           }

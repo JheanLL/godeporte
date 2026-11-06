@@ -175,6 +175,9 @@ importers:
       '@angular/core':
         specifier: ^21.0.0
         version: 21.2.26(@angular/compiler@21.2.26)(rxjs@7.8.2)
+      '@angular/localize':
+        specifier: 21.2.26
+        version: 21.2.26(@angular/compiler-cli@21.2.26(@angular/compiler@21.2.26)(supports-color@10.2.2)(typescript@5.9.3))(@angular/compiler@21.2.26)(supports-color@10.2.2)
       '@angular/platform-browser':
         specifier: ^21.0.0
         version: 21.2.26(@angular/common@21.2.26(@angular/core@21.2.26(@angular/compiler@21.2.26)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.2.26(@angular/compiler@21.2.26)(rxjs@7.8.2))
@@ -196,7 +199,7 @@ importers:
     devDependencies:
       '@angular/build':
         specifier: ^21.0.0
-        version: 21.2.29(@angular/compiler-cli@21.2.26(@angular/compiler@21.2.26)(supports-color@10.2.2)(typescript@5.9.3))(@angular/compiler@21.2.26)(@angular/core@21.2.26(@angular/compiler@21.2.26)(rxjs@7.8.2))(@angular/platform-browser@21.2.26(@angular/common@21.2.26(@angular/core@21.2.26(@angular/compiler@21.2.26)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.2.26(@angular/compiler@21.2.26)(rxjs@7.8.2)))(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@types/node@26.6.6)(chokidar@5.0.0)(postcss@8.5.32)(supports-color@10.2.2)(tslib@2.9.1)(typescript@5.9.3)
+        version: 21.2.29(@angular/compiler-cli@21.2.26(@angular/compiler@21.2.26)(supports-color@10.2.2)(typescript@5.9.3))(@angular/compiler@21.2.26)(@angular/core@21.2.26(@angular/compiler@21.2.26)(rxjs@7.8.2))(@angular/localize@21.2.26(@angular/compiler-cli@21.2.26(@angular/compiler@21.2.26)(supports-color@10.2.2)(typescript@5.9.3))(@angular/compiler@21.2.26)(supports-color@10.2.2))(@angular/platform-browser@21.2.26(@angular/common@21.2.26(@angular/core@21.2.26(@angular/compiler@21.2.26)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.2.26(@angular/compiler@21.2.26)(rxjs@7.8.2)))(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@types/node@26.6.6)(chokidar@5.0.0)(postcss@8.5.32)(supports-color@10.2.2)(tslib@2.9.1)(typescript@5.9.3)
       '@angular/cli':
         specifier: ^21.0.0
         version: 21.2.29(@types/node@26.6.6)(chokidar@5.0.0)(supports-color@10.2.2)
@@ -384,6 +387,14 @@ packages:
         optional: true
       zone.js:
         optional: true
+
+  '@angular/localize@21.2.26':
+    resolution: {integrity: sha512-cHwRz3aZzinWyCkWR+u7bq0HW3tf2kJyvYPUsP2C9ZQMFjs5MMMyw8Dm41WhfOMusZRgBTV13MAn1+HTBrbTAQ==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0}
+    hasBin: true
+    peerDependencies:
+      '@angular/compiler': 21.2.26
+      '@angular/compiler-cli': 21.2.26
 
   '@angular/platform-browser@21.2.26':
     resolution: {integrity: sha512-0yJN5FZX88SqdAnsmZC5E0MGpkQyG4CXjdWN3wTX3vFMsnetvm9MqyZKalxNFneucXV0KLrb8oRma5San3Hmeg==}
@@ -1819,6 +1830,18 @@ packages:
 
   '@tybys/wasm-util@0.10.4':
     resolution: {integrity: sha512-W3c4gRigFS0T/Ma4qIYF3GDAc5AQdHb1yL5znJT1Zv1YaD9Kitx656wBjvr19qbiosmZT8lWDM5BEMynUqX65A==}
+
+  '@types/babel__core@7.20.5':
+    resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
+
+  '@types/babel__generator@7.27.0':
+    resolution: {integrity: sha512-ufFd2Xi92OAVPYsy+P4n7/U7e68fex0+Ee8gSG9KX7eo084CWiQ4sdxktvdl0bOPupXtVJPY19zk6EwWqUQ8lg==}
+
+  '@types/babel__template@7.4.4':
+    resolution: {integrity: sha512-h/NUaSyG5EyxBIp8YRxo4RMe2/qQgvyowRwVMzhYhBCONbW8PUsg4lkFMrhgZhUe5z3L3MiLDuvyJ/CaPa2A8A==}
+
+  '@types/babel__traverse@7.28.0':
+    resolution: {integrity: sha512-8PvcXf70gTDZBgt9ptxJ8elBeBjcLOAcOtoO/mPJjtji1+CdGbHgm77om1GrsPxsiE+uXIpNSK64UYaIwQXd4Q==}
 
   '@types/estree@1.0.10':
     resolution: {integrity: sha512-lTyOMnOcmRBzdCv6/4zUZCrEhV0xrqQiUZBZtVcbmLHBXKLnN8q89v/wKRF/Q0HbwVsqbIG3o5HDoFl9sduM+g==}
@@ -3272,7 +3295,7 @@ snapshots:
     transitivePeerDependencies:
       - chokidar
 
-  '@angular/build@21.2.29(@angular/compiler-cli@21.2.26(@angular/compiler@21.2.26)(supports-color@10.2.2)(typescript@5.9.3))(@angular/compiler@21.2.26)(@angular/core@21.2.26(@angular/compiler@21.2.26)(rxjs@7.8.2))(@angular/platform-browser@21.2.26(@angular/common@21.2.26(@angular/core@21.2.26(@angular/compiler@21.2.26)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.2.26(@angular/compiler@21.2.26)(rxjs@7.8.2)))(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@types/node@26.6.6)(chokidar@5.0.0)(postcss@8.5.32)(supports-color@10.2.2)(tslib@2.9.1)(typescript@5.9.3)':
+  '@angular/build@21.2.29(@angular/compiler-cli@21.2.26(@angular/compiler@21.2.26)(supports-color@10.2.2)(typescript@5.9.3))(@angular/compiler@21.2.26)(@angular/core@21.2.26(@angular/compiler@21.2.26)(rxjs@7.8.2))(@angular/localize@21.2.26(@angular/compiler-cli@21.2.26(@angular/compiler@21.2.26)(supports-color@10.2.2)(typescript@5.9.3))(@angular/compiler@21.2.26)(supports-color@10.2.2))(@angular/platform-browser@21.2.26(@angular/common@21.2.26(@angular/core@21.2.26(@angular/compiler@21.2.26)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.2.26(@angular/compiler@21.2.26)(rxjs@7.8.2)))(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(@types/node@26.6.6)(chokidar@5.0.0)(postcss@8.5.32)(supports-color@10.2.2)(tslib@2.9.1)(typescript@5.9.3)':
     dependencies:
       '@ampproject/remapping': 2.3.0
       '@angular-devkit/architect': 0.2102.29(chokidar@5.0.0)
@@ -3307,6 +3330,7 @@ snapshots:
       watchpack: 2.5.1
     optionalDependencies:
       '@angular/core': 21.2.26(@angular/compiler@21.2.26)(rxjs@7.8.2)
+      '@angular/localize': 21.2.26(@angular/compiler-cli@21.2.26(@angular/compiler@21.2.26)(supports-color@10.2.2)(typescript@5.9.3))(@angular/compiler@21.2.26)(supports-color@10.2.2)
       '@angular/platform-browser': 21.2.26(@angular/common@21.2.26(@angular/core@21.2.26(@angular/compiler@21.2.26)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.2.26(@angular/compiler@21.2.26)(rxjs@7.8.2))
       lmdb: 3.5.1
       postcss: 8.5.32
@@ -3383,6 +3407,17 @@ snapshots:
       tslib: 2.9.1
     optionalDependencies:
       '@angular/compiler': 21.2.26
+
+  '@angular/localize@21.2.26(@angular/compiler-cli@21.2.26(@angular/compiler@21.2.26)(supports-color@10.2.2)(typescript@5.9.3))(@angular/compiler@21.2.26)(supports-color@10.2.2)':
+    dependencies:
+      '@angular/compiler': 21.2.26
+      '@angular/compiler-cli': 21.2.26(@angular/compiler@21.2.26)(supports-color@10.2.2)(typescript@5.9.3)
+      '@babel/core': 7.29.7(supports-color@10.2.2)
+      '@types/babel__core': 7.20.5
+      tinyglobby: 0.2.17
+      yargs: 18.2.0
+    transitivePeerDependencies:
+      - supports-color
 
   '@angular/platform-browser@21.2.26(@angular/common@21.2.26(@angular/core@21.2.26(@angular/compiler@21.2.26)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.2.26(@angular/compiler@21.2.26)(rxjs@7.8.2))':
     dependencies:
@@ -4441,6 +4476,27 @@ snapshots:
     dependencies:
       tslib: 2.9.1
     optional: true
+
+  '@types/babel__core@7.20.5':
+    dependencies:
+      '@babel/parser': 7.29.13
+      '@babel/types': 7.29.11
+      '@types/babel__generator': 7.27.0
+      '@types/babel__template': 7.4.4
+      '@types/babel__traverse': 7.28.0
+
+  '@types/babel__generator@7.27.0':
+    dependencies:
+      '@babel/types': 7.29.11
+
+  '@types/babel__template@7.4.4':
+    dependencies:
+      '@babel/parser': 7.29.13
+      '@babel/types': 7.29.11
+
+  '@types/babel__traverse@7.28.0':
+    dependencies:
+      '@babel/types': 7.29.11
 
   '@types/estree@1.0.10': {}
 
