@@ -1,76 +1,78 @@
 # GoDeporte
 
-Sistema de reservas y gestión de espacios deportivos basado en arquitectura de microservicios orientada a eventos.
+Sistema de gestión y reserva de espacios deportivos basado en arquitectura de microservicios orientada a eventos.
+
+---
+
+## 1. Demostración y Despliegue en la Web (Cloudflare)
+
+Esta modalidad ofrece una demostración pública funcional en la nube, accesible desde cualquier navegador sin necesidad de instalar dependencias locales:
 
 - **Aplicación web en vivo:** [https://godeporte.pages.dev](https://godeporte.pages.dev)
 - **API Gateway (Cloudflare Workers):** [https://godeporte-academico-gateway.bluefirt15.workers.dev](https://godeporte-academico-gateway.bluefirt15.workers.dev)
 
+### Cómo compilar y desplegar a la web
+
+```bash
+# 1. Instalar dependencias del cliente web y workers
+pnpm install --frozen-lockfile
+
+# 2. Compilar la aplicación web (Angular)
+pnpm run build
+
+# 3. Desplegar los Workers a Cloudflare (requiere autenticación con Wrangler)
+npx wrangler deploy workers/gateway/index.ts --name godeporte-academico-gateway
+```
+
 ---
 
-## 1. Microservicios Backend en Python (Docker Compose)
+## 2. Testeo y Ejecución Local con Docker (Microservicios Python)
 
-El núcleo del sistema está construido en **Python** utilizando **FastAPI** y bases de datos SQLite locales e independientes por servicio.
+Esta modalidad ejecuta los **microservicios nativos en Python** (FastAPI) con bases de datos SQLite independientes y Docker Compose para pruebas y evaluación académica.
 
-| Microservicio | Puerto Local | Documentación Interactiva (Swagger) | Descripción |
+### Microservicios disponibles
+
+| Microservicio | Puerto Local | Documentación Interactiva (Swagger) | Función |
 | :--- | :---: | :---: | :--- |
 | **`ms-reservas`** | `8001` | [http://localhost:8001/docs](http://localhost:8001/docs) | Creación, consulta y estados de reservas |
 | **`ms-canchas`** | `8002` | [http://localhost:8002/docs](http://localhost:8002/docs) | Catálogo de canchas y horarios disponibles |
-| **`ms-pagos`** | `8003` | [http://localhost:8003/docs](http://localhost:8003/docs) | Registro, validación y simulación de pagos |
-| **`ms-auth`** | `8004` | [http://localhost:8004/docs](http://localhost:8004/docs) | Registro, autenticación y credenciales |
-| **`ms-notificaciones`** | `8005` | [http://localhost:8005/docs](http://localhost:8005/docs) | Envío y registro de avisos y confirmaciones |
+| **`ms-pagos`** | `8003` | [http://localhost:8003/docs](http://localhost:8003/docs) | Procesamiento y simulación de pagos |
+| **`ms-auth`** | `8004` | [http://localhost:8004/docs](http://localhost:8004/docs) | Registro, login y credenciales |
+| **`ms-notificaciones`** | `8005` | [http://localhost:8005/docs](http://localhost:8005/docs) | Envío y registro de avisos |
 
-### Ejecución con Docker Compose
+### Comandos de ejecución
 
-Requiere Docker y Docker Compose activos. Desde la raíz del repositorio:
+Requiere tener el motor de **Docker** activo en tu equipo:
 
 ```bash
-# Levantar todos los microservicios en Python y la infraestructura (Kafka y Redis):
+# 1. Construir e iniciar todos los microservicios en segundo plano:
 docker compose up --build -d
 
-# Ver estado de los contenedores:
+# 2. Verificar que los contenedores estén corriendo:
 docker compose ps
 ```
 
-Para levantar únicamente el microservicio de pagos:
-
+*Para ejecutar únicamente el microservicio de pagos:*
 ```bash
 docker compose up --build -d ms-pagos
 ```
 
-Para detener los servicios:
-
+*Para detener todos los contenedores:*
 ```bash
 docker compose stop
 ```
 
----
+### Flujo de prueba en Swagger
 
-## 2. Despliegue en la Nube y Demostración Web
-
-Para la demostración pública accesible en internet, el proyecto cuenta con una capa serverless en **Cloudflare Pages & Workers** conectada a tópicos Kafka y caché Redis:
-
-- **Frontend Angular:** [`web/`](web/) desplegado en [GoDeporte Web](https://godeporte.pages.dev).
-- **Workers Edge:** [`workers/`](workers/) para ruteo de eventos y orquestación en la nube.
-
-### Ejecución local de la interfaz web y workers
-
-```bash
-pnpm install --frozen-lockfile
-docker compose up -d kafka redis
-pnpm setup:local
-```
-
-En terminales independientes:
-```bash
-pnpm dev:api      # Gateway y Workers locales (puerto 8787)
-pnpm dev:infra    # Puente Kafka y Redis local (puerto 8788)
-pnpm dev          # Servidor Angular (puerto 3000)
-```
+1. Abrir **`ms-canchas`** en [http://localhost:8002/docs](http://localhost:8002/docs) y registrar una cancha mediante el endpoint `POST /canchas`.
+2. Abrir **`ms-reservas`** en [http://localhost:8001/docs](http://localhost:8001/docs) y generar una reserva con `POST /reservas` indicando el `cancha_id`, fecha y monto.
+3. En el endpoint `POST /reservas/{id}/pagar`, enviar `metodo_pago: "Yape"` y `simulacion_resultado: "forzar_aprobado"` para confirmar la reserva.
+4. Consultar el estado resultante en [http://localhost:8003/docs](http://localhost:8003/docs) (**`ms-pagos`**) y en el listado de reservas.
 
 ---
 
-## 3. Documentación Técnica
+## 3. Documentación Técnica de Referencia
 
 - [Arquitectura, responsabilidades y secuencia](docs/arquitectura.md)
 - [Despliegue en Cloudflare, Aiven y Upstash](docs/despliegue.md)
-- [Contrato OpenAPI](docs/openapi.yaml)
+- [Especificación OpenAPI](docs/openapi.yaml)
