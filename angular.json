@@ -20,5 +20,8 @@
         "serve": {"builder": "@angular/build:dev-server", "options": {"buildTarget": "godeporte:build"}}
       }
     }
+  },
+  "cli": {
+    "analytics": false
   }
 }
