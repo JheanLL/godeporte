@@ -1,6 +1,9 @@
 # GoDeporte
 
-Sistema de reservas deportivas para Taller de Desarrollo de la Universidad Nacional de Ucayali. La demostración usa pagos simulados. El flujo de Yape directo y Culqi pertenece a una futura edición comercial independiente.
+Sistema de reservas y gestión de espacios deportivos basado en arquitectura de microservicios orientada a eventos. La demostración pública utiliza pagos simulados. El flujo de Yape directo y Culqi pertenece a una futura edición comercial independiente.
+
+- **Aplicación web en vivo:** [https://godeporte.pages.dev](https://godeporte.pages.dev)
+- **API Gateway (Cloudflare Workers):** [https://godeporte-academico-gateway.bluefirt15.workers.dev](https://godeporte-academico-gateway.bluefirt15.workers.dev)
 
 ## Demostración local
 
@@ -33,6 +36,7 @@ bash scripts/test-local.sh
 
 La prueba recorre los cinco servicios y verifica concurrencia, exclusión del horario, TTL real de Redis, expiración, aprobaciones y rechazos a través de Kafka, reintento de publicación, entrega repetida, autorización y QR de un solo uso.
 
+- [Sitio web público desplegado](https://godeporte.pages.dev)
 - [Arquitectura, responsabilidades y secuencia](docs/arquitectura.md)
 - [Despliegue en Cloudflare, Aiven y Upstash](docs/despliegue.md)
 - [Contrato OpenAPI](docs/openapi.yaml)

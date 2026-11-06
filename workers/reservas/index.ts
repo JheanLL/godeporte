@@ -104,10 +104,16 @@ app.post('/', async c => {
   return c.json(await booking(c.env, id), 201)
 })
 
+
+
 app.get('/:id', async c => {
   const actor = await user(c)
-  const item = await booking(c.env, c.req.param('id'))
+  let item = await booking(c.env, c.req.param('id'))
   if (!item || (item.usuario !== actor.id && actor.role !== 'admin')) fail(404, 'Reserva no encontrada.')
+  if (item.estado === 'PENDIENTE') {
+    await drainPayments(c.env).catch(() => {})
+    item = await booking(c.env, c.req.param('id')) ?? item
+  }
   return c.json(effective(item))
 })
 
@@ -123,11 +129,9 @@ app.post('/:id/pagar', async c => {
     body: JSON.stringify({ reserva: item.id, centimos: item.centimos, aprobado }),
   })
   if (!response.ok) return response
-  const { id, evento } = await response.json<{ id: string; evento: Payment | null }>()
-  if (evento?.reserva === item.id) await applyPayment(c.env, evento)
-  c.executionCtx.waitUntil(dispatch(c.env).catch(() => console.warn('Aviso pendiente de publicación.')))
+  const data = await response.json<{ id: string }>()
   c.executionCtx.waitUntil(drainPayments(c.env).catch(() => console.warn('Kafka se reintentará en el cron.')))
-  return c.json({ id, reserva: await booking(c.env, item.id) }, 202)
+  return c.json({ id: data.id, reserva: await booking(c.env, item.id) }, 202)
 })
 
 app.post('/:id/cancelar', async c => {
@@ -182,7 +186,7 @@ async function drainPayments(env: Env) {
   const authorization = kafkaAuthorization(env)
   if (!authorization) return
   const owner = crypto.randomUUID()
-  const lease = await env.DB.prepare(`INSERT INTO consumidor_kafka VALUES (1,?,unixepoch()+180)
+  const lease = await env.DB.prepare(`INSERT INTO consumidor_kafka VALUES (1,?,unixepoch()+15)
     ON CONFLICT(id) DO UPDATE SET owner=excluded.owner, vence=excluded.vence
     WHERE consumidor_kafka.vence<=unixepoch()`).bind(owner).run()
   if (!lease.meta.changes) return

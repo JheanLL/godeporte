@@ -8,6 +8,13 @@ app.use('/api/*', cors({
   allowHeaders: ['Authorization', 'Content-Type'],
   allowMethods: ['GET', 'POST', 'PUT', 'OPTIONS'],
 }))
+app.get('/', c => c.json({
+  servicio: 'gateway',
+  estado: 'UP',
+  descripcion: 'API Gateway de GoDeporte',
+  servicios: ['auth', 'canchas', 'reservas', 'pagos', 'notificaciones'],
+  web: c.env.WEB_ORIGIN,
+}))
 app.get('/health', c => c.json({ estado: 'UP', servicio: 'gateway' }))
 app.all('/api/:service/*', async c => {
   const bindings = { auth: c.env.AUTH, canchas: c.env.CANCHAS, reservas: c.env.RESERVAS,

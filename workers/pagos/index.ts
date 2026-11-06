@@ -29,11 +29,10 @@ app.post('/procesar', async c => {
     c.env.DB.prepare('SELECT * FROM pagos WHERE reserva=?').bind(reserva),
   ])
   const row = lookup.results[0]
-  const publicado = Boolean(row.publicado) || await publish(c.env, row).then(() => true).catch(() => {
-    console.warn('Evento pendiente de publicación.')
-    return false
-  })
-  return c.json({ id: row.id, estado: 'EN_PROCESO', evento: publicado ? paymentEvent(row) : null }, 202)
+  if (!row.publicado) {
+    await publish(c.env, row).catch(() => console.warn('Evento pendiente de publicación en Kafka.'))
+  }
+  return c.json({ id: row.id, estado: 'EN_PROCESO' }, 202)
 })
 app.post('/reintentar', async c => {
   internal(c)
